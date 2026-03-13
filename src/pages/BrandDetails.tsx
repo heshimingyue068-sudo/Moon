@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
-import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, AlertTriangle, Activity, DollarSign, BarChart3, Settings, Plus, X, History, ThumbsUp, ThumbsDown, CheckSquare, FolderOpen, Download, Upload } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, AlertTriangle, Activity, DollarSign, BarChart3, Settings, Plus, X, History, ThumbsUp, ThumbsDown, CheckSquare, FolderOpen, Download, Upload, Edit2, Users } from 'lucide-react';
 import { LifecyclePhase, BrandServiceTask, BrandOperationHistory, BrandTodo, BrandAsset, ChannelListingRule } from '../types';
 
 export const BrandDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { brands, serviceTemplates, updateBrand } = useAppContext();
   const brand = brands.find((b) => b.id === id);
+  
+  const queryParams = new URLSearchParams(location.search);
+  const subBrand = queryParams.get('brand');
+
+  const filteredTodos = brand?.todos?.filter(t => !subBrand || t.brandName === subBrand) || [];
 
   const [activePhase, setActivePhase] = useState<LifecyclePhase>(brand?.currentPhase || 'ONBOARDING');
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -21,6 +27,30 @@ export const BrandDetails: React.FC = () => {
   const [activeTodoModal, setActiveTodoModal] = useState(false);
   const [activeAssetModal, setActiveAssetModal] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  
+  const [isAddActivityModalOpen, setIsAddActivityModalOpen] = useState(false);
+  const [newActivityData, setNewActivityData] = useState({
+    title: '',
+    status: 'PLANNING' as 'PLANNING' | 'APPROVED' | 'ACTIVE' | 'ENDED',
+    time: '',
+    client: '',
+    products: '',
+    details: ''
+  });
+
+  const [isAddCaseModalOpen, setIsAddCaseModalOpen] = useState(false);
+  const [newCaseType, setNewCaseType] = useState<'SUCCESS' | 'FAILURE'>('SUCCESS');
+  const [newCaseData, setNewCaseData] = useState({
+    brandName: brand?.name || '',
+    date: '',
+    client: '',
+    event: '',
+    summary: ''
+  });
+
+  const [isOperatorModalOpen, setIsOperatorModalOpen] = useState(false);
+  const [editingOperators, setEditingOperators] = useState<string[]>([]);
+  const [newOperatorName, setNewOperatorName] = useState('');
 
   if (!brand) {
     return <div>Brand not found</div>;
@@ -37,7 +67,7 @@ export const BrandDetails: React.FC = () => {
     return [newLog, ...(brand.operationHistory || [])];
   };
 
-  const handleAddService = (templateId: string) => {
+  const handleAddService = (templateId: string, operator?: string) => {
     const template = serviceTemplates.find(t => t.id === templateId);
     if (!template) return;
     
@@ -48,6 +78,7 @@ export const BrandDetails: React.FC = () => {
       frequency: template.frequency,
       targetCount: template.targetCount,
       currentCount: 0,
+      operator: operator || (brand.operators?.[0] || '未分配'),
       records: []
     };
     
@@ -56,7 +87,7 @@ export const BrandDetails: React.FC = () => {
         ...brand.operations,
         services: [...(brand.operations.services || []), newService]
       },
-      operationHistory: addLog('添加服务事项', `添加了【${template.name}】服务`)
+      operationHistory: addLog('添加服务事项', `添加了【${template.name}】服务，下发给: ${newService.operator}`)
     });
   };
 
@@ -174,6 +205,75 @@ export const BrandDetails: React.FC = () => {
     setEditingFinancePeriod(null);
   };
 
+  const handleAddActivity = () => {
+    if (!newActivityData.title || !newActivityData.time) return;
+
+    const newActivity = {
+      id: `a${Date.now()}`,
+      title: newActivityData.title,
+      status: newActivityData.status,
+      time: newActivityData.time,
+      client: newActivityData.client,
+      products: newActivityData.products ? newActivityData.products.split(',').map(p => p.trim()) : [],
+      details: newActivityData.details,
+      materials: []
+    };
+
+    updateBrand(brand.id, {
+      operations: {
+        ...brand.operations,
+        activities: [newActivity, ...(brand.operations.activities || [])]
+      },
+      operationHistory: addLog('新增活动', `新增了活动: ${newActivity.title}`)
+    });
+
+    setIsAddActivityModalOpen(false);
+    setNewActivityData({
+      title: '',
+      status: 'PLANNING',
+      time: '',
+      client: '',
+      products: '',
+      details: ''
+    });
+  };
+
+  const handleAddCase = () => {
+    if (!newCaseData.brandName || !newCaseData.date || !newCaseData.event) return;
+
+    const newCase = {
+      id: `c${Date.now()}`,
+      type: newCaseType,
+      brandName: newCaseData.brandName,
+      date: newCaseData.date,
+      client: newCaseData.client,
+      event: newCaseData.event,
+      summary: newCaseData.summary
+    };
+
+    updateBrand(brand.id, {
+      cases: [newCase, ...(brand.cases || [])],
+      operationHistory: addLog('新增案例', `新增了${newCaseType === 'SUCCESS' ? '优秀' : '失败'}案例: ${newCase.event}`)
+    });
+
+    setIsAddCaseModalOpen(false);
+    setNewCaseData({
+      brandName: brand.name,
+      date: '',
+      client: '',
+      event: '',
+      summary: ''
+    });
+  };
+
+  const handleSaveOperators = () => {
+    updateBrand(brand.id, {
+      operators: editingOperators,
+      operationHistory: addLog('更新运营人员', `更新了运营人员列表`)
+    });
+    setIsOperatorModalOpen(false);
+  };
+
   const renderStatusIcon = (completed: boolean, inProgress: boolean = false) => {
     if (completed) return <CheckCircle2 className="h-5 w-5 text-green-500" />;
     if (inProgress) return <Clock className="h-5 w-5 text-yellow-500" />;
@@ -193,11 +293,44 @@ export const BrandDetails: React.FC = () => {
           </button>
           <img src={brand.logo} alt={brand.name} className="h-16 w-16 rounded-full border border-slate-200 object-cover" referrerPolicy="no-referrer" />
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">{brand.name}</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              {brand.name} {subBrand && <span className="text-indigo-600 ml-2">/ {subBrand}</span>}
+            </h1>
             <div className="flex items-center space-x-3 mt-1">
               <span className="text-sm text-slate-500">{brand.category}</span>
               <span className="text-slate-300">|</span>
               <span className="text-sm text-slate-500">负责人: {brand.manager}</span>
+              {brand.operators && brand.operators.length > 0 ? (
+                <>
+                  <span className="text-slate-300">|</span>
+                  <span className="text-sm text-slate-500 flex items-center">
+                    运营: {brand.operators.join(', ')}
+                    <button 
+                      onClick={() => {
+                        setEditingOperators([...(brand.operators || [])]);
+                        setIsOperatorModalOpen(true);
+                      }}
+                      className="ml-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-slate-300">|</span>
+                  <button 
+                    onClick={() => {
+                      setEditingOperators([]);
+                      setIsOperatorModalOpen(true);
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-0.5" />
+                    添加运营
+                  </button>
+                </>
+              )}
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 brand.healthStatus === 'HEALTHY' ? 'bg-green-100 text-green-800' :
                 brand.healthStatus === 'AT_RISK' ? 'bg-yellow-100 text-yellow-800' :
@@ -216,9 +349,9 @@ export const BrandDetails: React.FC = () => {
           >
             <CheckSquare className="mr-2 h-4 w-4" />
             待办事项
-            {brand.todos && brand.todos.filter(t => !t.completed).length > 0 && (
+            {filteredTodos.filter(t => !t.completed).length > 0 && (
               <span className="ml-2 inline-flex items-center justify-center rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white">
-                {brand.todos.filter(t => !t.completed).length}
+                {filteredTodos.filter(t => !t.completed).length}
               </span>
             )}
           </button>
@@ -227,7 +360,7 @@ export const BrandDetails: React.FC = () => {
             className="inline-flex items-center justify-center rounded-md bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 shadow-sm ring-1 ring-inset ring-blue-300 hover:bg-blue-100"
           >
             <FolderOpen className="mr-2 h-4 w-4" />
-            品牌资料库
+            项目资料库
           </button>
           <button 
             onClick={() => setIsHistoryModalOpen(true)}
@@ -242,9 +375,6 @@ export const BrandDetails: React.FC = () => {
           >
             <Settings className="mr-2 h-4 w-4" />
             配置服务
-          </button>
-          <button className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
-            推进阶段
           </button>
         </div>
       </div>
@@ -391,32 +521,58 @@ export const BrandDetails: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
+              <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200 md:col-span-2">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-slate-900">2. 品牌系统对接</h3>
-                  {renderStatusIcon(brand.onboarding.brandApi.completed, brand.onboarding.brandApi.progress > 0)}
+                  <h3 className="text-lg font-medium text-slate-900">2. 系统对接 (品牌与客户)</h3>
+                  <div className="flex space-x-2">
+                    {renderStatusIcon(brand.onboarding.brandApi.completed, brand.onboarding.brandApi.progress > 0)}
+                    {renderStatusIcon(brand.onboarding.channelApi.completed, brand.onboarding.channelApi.progress > 0)}
+                  </div>
                 </div>
-                <p className="text-sm text-slate-600 mb-4">系统API对接过程，涉及到品牌方具体的商品及逻辑规则。</p>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium text-slate-700">对接进度</span>
-                    <span className="text-indigo-600 font-medium">{brand.onboarding.brandApi.progress}%</span>
+                <p className="text-sm text-slate-600 mb-6">展示品牌方系统与客户方系统的API对接进度及状态。</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Brand API */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-slate-800">品牌系统对接</h4>
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium text-slate-700">对接进度</span>
+                      <span className="text-indigo-600 font-medium">{brand.onboarding.brandApi.progress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${brand.onboarding.brandApi.progress}%` }}></div>
+                    </div>
+                    <div className="mt-2 p-3 bg-slate-50 rounded-md border border-slate-100">
+                      <p className="text-sm text-slate-600 flex items-start">
+                        <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0 text-yellow-500" />
+                        {brand.onboarding.brandApi.notes || '暂无备注'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${brand.onboarding.brandApi.progress}%` }}></div>
-                  </div>
-                  <div className="mt-4 p-3 bg-yellow-50 rounded-md border border-yellow-100">
-                    <p className="text-sm text-yellow-800 flex items-start">
-                      <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                      {brand.onboarding.brandApi.notes || '暂无备注'}
-                    </p>
+
+                  {/* Channel API */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-slate-800">客户系统对接</h4>
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium text-slate-700">对接进度</span>
+                      <span className="text-indigo-600 font-medium">{brand.onboarding.channelApi.progress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${brand.onboarding.channelApi.progress}%` }}></div>
+                    </div>
+                    <div className="mt-2 p-3 bg-slate-50 rounded-md border border-slate-100">
+                      <p className="text-sm text-slate-600 flex items-start">
+                        <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0 text-yellow-500" />
+                        {brand.onboarding.channelApi.notes || '暂无备注'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
+              <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200 md:col-span-2">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-slate-900">3. 品牌商品上架渠道商</h3>
+                  <h3 className="text-lg font-medium text-slate-900">3. 客户商品上架</h3>
                   {renderStatusIcon(brand.onboarding.channelListing.completed)}
                 </div>
                 <p className="text-sm text-slate-600 mb-4">上架资料包括品牌授权，ICP备案，商品详情，结算规则等。</p>
@@ -506,23 +662,44 @@ export const BrandDetails: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </div>
 
-              <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200 md:col-span-2">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-slate-900">4. 渠道商系统对接</h3>
-                  {renderStatusIcon(brand.onboarding.channelApi.completed, brand.onboarding.channelApi.progress > 0)}
-                </div>
-                <p className="text-sm text-slate-600 mb-4">与客户进行系统打通，涉及商品完成逻辑规则。</p>
-                <div className="space-y-3 max-w-md">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium text-slate-700">对接进度</span>
-                    <span className="text-indigo-600 font-medium">{brand.onboarding.channelApi.progress}%</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${brand.onboarding.channelApi.progress}%` }}></div>
-                  </div>
-                  <p className="text-sm text-slate-500 mt-2">{brand.onboarding.channelApi.notes}</p>
+                {/* 已上架商品 */}
+                <div className="mt-8 border-t border-slate-200 pt-6">
+                  <h4 className="text-md font-semibold text-slate-900 mb-4">已上架商品</h4>
+                  {brand.onboarding.channelListing.listedProducts && brand.onboarding.channelListing.listedProducts.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">商品名称</th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">客户端商品名称</th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">状态</th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">上架时间</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-200">
+                          {brand.onboarding.channelListing.listedProducts.map((product) => (
+                            <tr key={product.id}>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900">{product.name}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{product.clientProductName}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
+                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  product.status === 'ONLINE' ? 'bg-green-100 text-green-800' :
+                                  product.status === 'OFFLINE' ? 'bg-slate-100 text-slate-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {product.status === 'ONLINE' ? '已上线' : product.status === 'OFFLINE' ? '已下线' : '审核中'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{product.listingTime}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">暂无已上架商品</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -603,10 +780,18 @@ export const BrandDetails: React.FC = () => {
                         <div className="flex justify-between items-start mb-3">
                           <div className="pr-6">
                             <h4 className="font-semibold text-slate-900 text-base">{service.name}</h4>
-                            <p className="text-xs text-slate-500 mt-1 flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {service.frequency === 'DAILY' ? '每天' : service.frequency === 'WEEKLY' ? '每周' : service.frequency === 'MONTHLY' ? '每月' : '自定义'} {service.targetCount} 次
-                            </p>
+                            <div className="flex flex-col space-y-1 mt-1">
+                              <p className="text-xs text-slate-500 flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {service.frequency === 'DAILY' ? '每天' : service.frequency === 'WEEKLY' ? '每周' : service.frequency === 'MONTHLY' ? '每月' : '自定义'} {service.targetCount} 次
+                              </p>
+                              {service.operator && (
+                                <p className="text-xs text-slate-500 flex items-center">
+                                  <span className="inline-block w-3 h-3 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-1 text-[8px]">运</span>
+                                  {service.operator}
+                                </p>
+                              )}
+                            </div>
                           </div>
                           <div className="flex flex-col items-end">
                             <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-bold ${
@@ -656,43 +841,76 @@ export const BrandDetails: React.FC = () => {
                 </div>
               </div>
 
-              {/* Activities & Feedbacks */}
+              {/* Activities */}
               <div className="space-y-6">
                 <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-medium text-slate-900">近期活动</h3>
-                    <button className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">新增</button>
+                    <button 
+                      onClick={() => setIsAddActivityModalOpen(true)}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      新增
+                    </button>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {brand.operations.activities.length > 0 ? brand.operations.activities.map(act => (
-                      <div key={act.id} className="flex justify-between items-center text-sm p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="font-medium text-slate-800">{act.name}</span>
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          act.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                          act.status === 'PLANNING' ? 'bg-blue-100 text-blue-700' :
-                          'bg-slate-200 text-slate-700'
-                        }`}>
-                          {act.status === 'ACTIVE' ? '进行中' : act.status === 'PLANNING' ? '筹备中' : act.status}
-                        </span>
+                      <div key={act.id} className="flex flex-col p-4 border border-slate-200 rounded-lg hover:border-indigo-300 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <span className={`h-2.5 w-2.5 rounded-full ${
+                              act.status === 'ACTIVE' ? 'bg-green-500' :
+                              act.status === 'PLANNING' ? 'bg-blue-500' : 'bg-slate-400'
+                            }`}></span>
+                            <span className="font-medium text-slate-900">{act.title}</span>
+                            {act.client && (
+                              <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
+                                {act.client}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-slate-500">
+                            {act.status === 'ACTIVE' ? '进行中' : act.status === 'PLANNING' ? '筹备中' : '已结束'}
+                          </span>
+                        </div>
+                        
+                        <div className="mb-3">
+                          <span className="text-xs text-slate-500 block mb-1">活动时间: {act.time}</span>
+                          {act.details && (
+                            <p className="text-sm text-slate-600">{act.details}</p>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 pt-3 border-t border-slate-100">
+                          {act.products && act.products.length > 0 && (
+                            <div>
+                              <span className="text-xs font-medium text-slate-500 block mb-1">参加商品</span>
+                              <div className="flex flex-wrap gap-1">
+                                {act.products.map((prod, idx) => (
+                                  <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                                    {prod}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {act.materials && act.materials.length > 0 && (
+                            <div>
+                              <span className="text-xs font-medium text-slate-500 block mb-1">活动资料</span>
+                              <ul className="space-y-1">
+                                {act.materials.map((mat, idx) => (
+                                  <li key={idx} className="flex items-center text-xs">
+                                    <FileText className="h-3.5 w-3.5 text-indigo-400 mr-1" />
+                                    <a href={mat.url} className="text-indigo-600 hover:underline truncate">{mat.name}</a>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )) : <p className="text-sm text-slate-500 text-center py-4">暂无活动</p>}
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-medium text-slate-900">沟通与反馈</h3>
-                    <button className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">新增</button>
-                  </div>
-                  <div className="space-y-3">
-                    {brand.operations.feedbacks.length > 0 ? brand.operations.feedbacks.map(fb => (
-                      <div key={fb.id} className="text-sm p-4 bg-slate-50 rounded-lg border border-slate-100">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-slate-500">{fb.date}</span>
-                        </div>
-                        <p className="text-slate-700 leading-relaxed">{fb.content}</p>
-                      </div>
-                    )) : <p className="text-sm text-slate-500 text-center py-4">暂无反馈记录</p>}
                   </div>
                 </div>
               </div>
@@ -908,19 +1126,31 @@ export const BrandDetails: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-slate-900 flex items-center">
                     <ThumbsUp className="h-5 w-5 text-emerald-500 mr-2" />
-                    品牌优秀案例
+                    项目优秀案例
                   </h3>
-                  <button className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">新增</button>
+                  <button 
+                    onClick={() => {
+                      setNewCaseType('SUCCESS');
+                      setIsAddCaseModalOpen(true);
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    新增
+                  </button>
                 </div>
                 <div className="space-y-4">
                   {brand.cases?.filter(c => c.type === 'SUCCESS').length > 0 ? (
                     brand.cases.filter(c => c.type === 'SUCCESS').map(c => (
                       <div key={c.id} className="p-4 rounded-lg border border-emerald-100 bg-emerald-50/50">
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-semibold text-slate-900">{c.title}</h4>
+                          <h4 className="font-semibold text-slate-900">{c.brandName}</h4>
                           <span className="text-xs text-slate-500">{c.date}</span>
                         </div>
-                        <p className="text-sm text-slate-700">{c.description}</p>
+                        <div className="space-y-1.5 mt-3">
+                          <p className="text-sm text-slate-700"><span className="font-medium text-slate-500">客户：</span>{c.client}</p>
+                          <p className="text-sm text-slate-700"><span className="font-medium text-slate-500">事件：</span>{c.event}</p>
+                          <p className="text-sm text-slate-700"><span className="font-medium text-slate-500">总结：</span>{c.summary}</p>
+                        </div>
                       </div>
                     ))
                   ) : (
@@ -936,19 +1166,31 @@ export const BrandDetails: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-slate-900 flex items-center">
                     <ThumbsDown className="h-5 w-5 text-red-500 mr-2" />
-                    品牌失败案例
+                    项目失败案例
                   </h3>
-                  <button className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">新增</button>
+                  <button 
+                    onClick={() => {
+                      setNewCaseType('FAILURE');
+                      setIsAddCaseModalOpen(true);
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    新增
+                  </button>
                 </div>
                 <div className="space-y-4">
                   {brand.cases?.filter(c => c.type === 'FAILURE').length > 0 ? (
                     brand.cases.filter(c => c.type === 'FAILURE').map(c => (
                       <div key={c.id} className="p-4 rounded-lg border border-red-100 bg-red-50/50">
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-semibold text-slate-900">{c.title}</h4>
+                          <h4 className="font-semibold text-slate-900">{c.brandName}</h4>
                           <span className="text-xs text-slate-500">{c.date}</span>
                         </div>
-                        <p className="text-sm text-slate-700">{c.description}</p>
+                        <div className="space-y-1.5 mt-3">
+                          <p className="text-sm text-slate-700"><span className="font-medium text-slate-500">客户：</span>{c.client}</p>
+                          <p className="text-sm text-slate-700"><span className="font-medium text-slate-500">事件：</span>{c.event}</p>
+                          <p className="text-sm text-slate-700"><span className="font-medium text-slate-500">总结：</span>{c.summary}</p>
+                        </div>
                       </div>
                     ))
                   ) : (
@@ -981,22 +1223,40 @@ export const BrandDetails: React.FC = () => {
               {serviceTemplates.map(template => {
                 const isAdded = brand.operations.services?.some(s => s.templateId === template.id);
                 return (
-                  <div key={template.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50">
-                    <div>
-                      <p className="font-medium text-slate-900 text-sm">{template.name}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{template.targetRole} · {template.targetCount}次/{template.frequency === 'WEEKLY' ? '周' : template.frequency === 'MONTHLY' ? '月' : '天'}</p>
+                  <div key={template.id} className="flex flex-col p-3 rounded-lg border border-slate-200 bg-slate-50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 text-sm">{template.name}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{template.targetRole} · {template.targetCount}次/{template.frequency === 'WEEKLY' ? '周' : template.frequency === 'MONTHLY' ? '月' : '天'}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const selectEl = document.getElementById(`operator-select-${template.id}`) as HTMLSelectElement;
+                          handleAddService(template.id, selectEl?.value);
+                        }}
+                        disabled={isAdded}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                          isAdded 
+                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed' 
+                            : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                        }`}
+                      >
+                        {isAdded ? '已添加' : '添加并下发'}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => isAdded ? null : handleAddService(template.id)}
-                      disabled={isAdded}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                        isAdded 
-                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed' 
-                          : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-                      }`}
-                    >
-                      {isAdded ? '已添加' : '添加'}
-                    </button>
+                    {!isAdded && brand.operators && brand.operators.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-slate-500">下发给:</span>
+                        <select 
+                          id={`operator-select-${template.id}`}
+                          className="text-xs border-slate-200 rounded-md py-1 pl-2 pr-6 focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                          {brand.operators.map(op => (
+                            <option key={op} value={op}>{op}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1309,16 +1569,19 @@ export const BrandDetails: React.FC = () => {
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[60vh]">
-              {brand.todos && brand.todos.length > 0 ? (
+              {filteredTodos.length > 0 ? (
                 <ul className="space-y-3">
-                  {brand.todos.map(todo => (
+                  {filteredTodos.map(todo => (
                     <li key={todo.id} className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-100">
                       <div className="flex-shrink-0 mt-0.5">
                         <input type="checkbox" checked={todo.completed} readOnly className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600" />
                       </div>
                       <div className="ml-3 flex-1">
                         <p className={`text-sm font-medium ${todo.completed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{todo.text}</p>
-                        {todo.dueDate && <p className="text-xs text-slate-500 mt-1">截止日期: {todo.dueDate}</p>}
+                        <div className="flex items-center gap-2 mt-1">
+                          {todo.brandName && <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">{todo.brandName}</span>}
+                          {todo.dueDate && <span className="text-xs text-slate-500">截止日期: {todo.dueDate}</span>}
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -1336,14 +1599,14 @@ export const BrandDetails: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h3 className="text-lg font-bold text-slate-900">品牌资料库</h3>
+              <h3 className="text-lg font-bold text-slate-900">项目资料库</h3>
               <button onClick={() => setActiveAssetModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               <div className="mb-4 flex justify-between items-center">
-                <p className="text-sm text-slate-500">已维护的品牌资料文件</p>
+                <p className="text-sm text-slate-500">已维护的项目资料文件</p>
                 <button className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
                   <Upload className="h-3.5 w-3.5 mr-1.5" />
                   上传资料
@@ -1367,8 +1630,268 @@ export const BrandDetails: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-slate-500 py-8">暂无品牌资料</p>
+                <p className="text-center text-slate-500 py-8">暂无项目资料</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Activity Modal */}
+      {isAddActivityModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900">新增活动</h3>
+              <button onClick={() => setIsAddActivityModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">活动标题 *</label>
+                <input
+                  type="text"
+                  value={newActivityData.title}
+                  onChange={(e) => setNewActivityData({ ...newActivityData, title: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="例如：春季新品首发"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">活动状态</label>
+                <select
+                  value={newActivityData.status}
+                  onChange={(e) => setNewActivityData({ ...newActivityData, status: e.target.value as any })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                >
+                  <option value="PLANNING">筹备中</option>
+                  <option value="ACTIVE">进行中</option>
+                  <option value="ENDED">已结束</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">活动时间 *</label>
+                <input
+                  type="text"
+                  value={newActivityData.time}
+                  onChange={(e) => setNewActivityData({ ...newActivityData, time: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="例如：2026-03-01 至 2026-03-31"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">活动客户</label>
+                <input
+                  type="text"
+                  value={newActivityData.client}
+                  onChange={(e) => setNewActivityData({ ...newActivityData, client: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="例如：中国移动"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">参加商品 (逗号分隔)</label>
+                <input
+                  type="text"
+                  value={newActivityData.products}
+                  onChange={(e) => setNewActivityData({ ...newActivityData, products: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="例如：春意抹茶拿铁, 樱花草莓星冰乐"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">活动详情</label>
+                <textarea
+                  value={newActivityData.details}
+                  onChange={(e) => setNewActivityData({ ...newActivityData, details: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  rows={3}
+                  placeholder="活动的具体描述和规则"
+                ></textarea>
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end space-x-3">
+              <button
+                onClick={() => setIsAddActivityModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleAddActivity}
+                disabled={!newActivityData.title || !newActivityData.time}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                确认新增
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Case Modal */}
+      {isAddCaseModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900">
+                新增{newCaseType === 'SUCCESS' ? '优秀' : '失败'}案例
+              </h3>
+              <button onClick={() => setIsAddCaseModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">品牌 *</label>
+                <input
+                  type="text"
+                  value={newCaseData.brandName}
+                  onChange={(e) => setNewCaseData({ ...newCaseData, brandName: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="例如：星巴克 (Starbucks)"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">时间 *</label>
+                <input
+                  type="date"
+                  value={newCaseData.date}
+                  onChange={(e) => setNewCaseData({ ...newCaseData, date: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">客户</label>
+                <input
+                  type="text"
+                  value={newCaseData.client}
+                  onChange={(e) => setNewCaseData({ ...newCaseData, client: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="例如：抖音本地生活"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">事件 *</label>
+                <input
+                  type="text"
+                  value={newCaseData.event}
+                  onChange={(e) => setNewCaseData({ ...newCaseData, event: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="例如：春节抖音本地生活爆单"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">总结</label>
+                <textarea
+                  value={newCaseData.summary}
+                  onChange={(e) => setNewCaseData({ ...newCaseData, summary: e.target.value })}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  rows={3}
+                  placeholder="对该事件的经验总结或失败教训"
+                ></textarea>
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end space-x-3">
+              <button
+                onClick={() => setIsAddCaseModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleAddCase}
+                disabled={!newCaseData.brandName || !newCaseData.date || !newCaseData.event}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                确认新增
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Operator Modal */}
+      {isOperatorModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center">
+                <Users className="h-5 w-5 mr-2 text-indigo-500" />
+                配置运营人员
+              </h3>
+              <button onClick={() => setIsOperatorModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">当前运营人员</label>
+                {editingOperators.length > 0 ? (
+                  <ul className="space-y-2">
+                    {editingOperators.map((op, index) => (
+                      <li key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded-md border border-slate-200">
+                        <span className="text-sm text-slate-800">{op}</span>
+                        <button
+                          onClick={() => setEditingOperators(editingOperators.filter((_, i) => i !== index))}
+                          className="text-slate-400 hover:text-red-500"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-500 py-2">暂无运营人员</p>
+                )}
+              </div>
+              <div className="pt-4 border-t border-slate-100">
+                <label className="block text-sm font-medium text-slate-700 mb-2">新增运营人员</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newOperatorName}
+                    onChange={(e) => setNewOperatorName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newOperatorName.trim()) {
+                        if (!editingOperators.includes(newOperatorName.trim())) {
+                          setEditingOperators([...editingOperators, newOperatorName.trim()]);
+                        }
+                        setNewOperatorName('');
+                      }
+                    }}
+                    className="flex-1 rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="输入姓名"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newOperatorName.trim() && !editingOperators.includes(newOperatorName.trim())) {
+                        setEditingOperators([...editingOperators, newOperatorName.trim()]);
+                        setNewOperatorName('');
+                      }
+                    }}
+                    disabled={!newOperatorName.trim()}
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    添加
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end space-x-3">
+              <button
+                onClick={() => setIsOperatorModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSaveOperators}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+              >
+                保存配置
+              </button>
             </div>
           </div>
         </div>

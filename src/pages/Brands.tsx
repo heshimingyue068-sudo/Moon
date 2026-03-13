@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
-import { Search, Plus, Filter, MoreVertical, CheckSquare, X } from 'lucide-react';
+import { Search, Plus, Filter, MoreVertical, CheckSquare, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { LifecyclePhase, BrandTodo, Brand } from '../types';
 
 export const Brands: React.FC = () => {
@@ -10,6 +10,19 @@ export const Brands: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [phaseFilter, setPhaseFilter] = useState<LifecyclePhase | 'ALL'>('ALL');
   const [activeTodoModal, setActiveTodoModal] = useState<Brand | null>(null);
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+
+  const toggleProject = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  };
 
   const filteredBrands = brands.filter(brand => {
     const matchesSearch = brand.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -20,10 +33,10 @@ export const Brands: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">品牌管理 (全生命周期)</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">项目管理 (全生命周期)</h1>
         <button className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
           <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-          新增品牌
+          新增项目
         </button>
       </div>
 
@@ -35,7 +48,7 @@ export const Brands: React.FC = () => {
           <input
             type="text"
             className="block w-full rounded-md border-0 py-1.5 pl-10 pr-3 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-            placeholder="搜索品牌名称..."
+            placeholder="搜索项目名称..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -62,16 +75,27 @@ export const Brands: React.FC = () => {
         {filteredBrands.map((brand) => (
           <div
             key={brand.id}
-            onClick={() => navigate(`/brands/${brand.id}`)}
-            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-200 transition-all hover:shadow-md hover:border-indigo-300"
+            className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-200 transition-all hover:shadow-md hover:border-indigo-300"
           >
-            <div className="flex flex-1 flex-col p-6">
+            <div 
+              onClick={() => {
+                if (brand.brands && brand.brands.length > 0) {
+                  toggleProject(brand.id);
+                } else {
+                  navigate(`/brands/${brand.id}`);
+                }
+              }}
+              className="flex flex-1 flex-col p-6 cursor-pointer"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <img src={brand.logo} alt={brand.name} className="h-12 w-12 rounded-full border border-slate-200 object-cover" referrerPolicy="no-referrer" />
                   <div>
                     <h3 className="text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{brand.name}</h3>
                     <p className="text-sm text-slate-500">{brand.category}</p>
+                    {brand.brands && brand.brands.length > 0 && (
+                      <p className="text-xs text-slate-400 mt-1">包含品牌: {brand.brands.join(', ')}</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -87,9 +111,15 @@ export const Brands: React.FC = () => {
                       {brand.todos.filter(t => !t.completed).length} 待办
                     </button>
                   )}
-                  <button className="text-slate-400 hover:text-slate-600" onClick={(e) => e.stopPropagation()}>
-                    <MoreVertical className="h-5 w-5" />
-                  </button>
+                  {brand.brands && brand.brands.length > 0 ? (
+                    <button className="text-slate-400 hover:text-slate-600" onClick={(e) => { e.stopPropagation(); toggleProject(brand.id); }}>
+                      {expandedProjects.has(brand.id) ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                    </button>
+                  ) : (
+                    <button className="text-slate-400 hover:text-slate-600" onClick={(e) => e.stopPropagation()}>
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -132,6 +162,27 @@ export const Brands: React.FC = () => {
                 </div>
               </dl>
             </div>
+            
+            {expandedProjects.has(brand.id) && brand.brands && brand.brands.length > 0 && (
+              <div className="border-t border-slate-100 bg-slate-50 p-4">
+                <h4 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wider">旗下品牌</h4>
+                <div className="space-y-2">
+                  {brand.brands.map(subBrand => (
+                    <button
+                      key={subBrand}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/brands/${brand.id}?brand=${encodeURIComponent(subBrand)}`);
+                      }}
+                      className="w-full flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all text-left group/brand"
+                    >
+                      <span className="text-sm font-medium text-slate-700 group-hover/brand:text-indigo-600">{subBrand}</span>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover/brand:text-indigo-600" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -169,9 +220,10 @@ export const Brands: React.FC = () => {
                         <p className={`text-sm font-medium ${todo.completed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
                           {todo.text}
                         </p>
-                        {todo.dueDate && (
-                          <p className="text-xs text-slate-500 mt-1">截止日期: {todo.dueDate}</p>
-                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          {todo.brandName && <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">{todo.brandName}</span>}
+                          {todo.dueDate && <span className="text-xs text-slate-500">截止日期: {todo.dueDate}</span>}
+                        </div>
                       </div>
                     </li>
                   ))}

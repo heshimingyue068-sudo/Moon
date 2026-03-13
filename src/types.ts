@@ -18,6 +18,7 @@ export interface BrandServiceTask {
   targetCount: number;
   currentCount: number;
   lastRecordDate?: string;
+  operator?: string;
   records: { id: string; date: string; note: string }[];
 }
 
@@ -41,9 +42,11 @@ export interface BrandOperationHistory {
 export interface BrandCase {
   id: string;
   type: 'SUCCESS' | 'FAILURE';
-  title: string;
-  description: string;
+  brandName: string;
   date: string;
+  client: string;
+  event: string;
+  summary: string;
 }
 
 export interface BrandTodo {
@@ -51,6 +54,7 @@ export interface BrandTodo {
   text: string;
   completed: boolean;
   dueDate?: string;
+  brandName?: string;
 }
 
 export interface BrandAsset {
@@ -79,14 +83,24 @@ export interface ChannelListingRule {
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 }
 
+export interface ListedProduct {
+  id: string;
+  name: string;
+  clientProductName: string;
+  status: 'ONLINE' | 'OFFLINE' | 'REVIEWING';
+  listingTime: string;
+}
+
 export interface Brand {
   id: string;
   name: string;
+  brands?: string[];
   logo: string;
   category: string;
   currentPhase: LifecyclePhase;
   healthStatus: 'HEALTHY' | 'AT_RISK' | 'CRITICAL';
   manager: string;
+  operators?: string[];
   todos?: BrandTodo[];
   assets?: BrandAsset[];
 
@@ -102,7 +116,7 @@ export interface Brand {
       contractDetails?: ContractDetails;
     };
     brandApi: { completed: boolean; progress: number; notes: string };
-    channelListing: { completed: boolean; channels: string[]; notes: string; listings?: ChannelListingRule[] };
+    channelListing: { completed: boolean; channels: string[]; notes: string; listings?: ChannelListingRule[]; listedProducts?: ListedProduct[] };
     channelApi: { completed: boolean; progress: number; notes: string };
   };
 
@@ -125,13 +139,13 @@ export interface Brand {
     }[];
     activities: {
       id: string;
-      name: string;
+      title: string;
       status: 'PLANNING' | 'APPROVED' | 'ACTIVE' | 'ENDED';
-    }[];
-    feedbacks: {
-      id: string;
-      date: string;
-      content: string;
+      time: string;
+      client?: string;
+      products?: string[];
+      details?: string;
+      materials?: { name: string; url: string }[];
     }[];
   };
   finance: {

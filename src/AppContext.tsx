@@ -38,15 +38,17 @@ const initialServiceTemplates: ServiceTemplate[] = [
 const initialBrands: Brand[] = [
   {
     id: '1',
-    name: '星巴克 (Starbucks)',
-    logo: 'https://picsum.photos/seed/starbucks/100/100',
-    category: '餐饮美食',
+    name: '杭研宠物大健康项目',
+    brands: ['新瑞鹏', '美团医药'],
+    logo: 'https://picsum.photos/seed/pethealth/100/100',
+    category: '宠物健康',
     currentPhase: 'OPERATING',
     healthStatus: 'HEALTHY',
     manager: '王经理',
+    operators: ['张运营', '李商务'],
     todos: [
-      { id: 'todo1', text: '提交2月运营月报', completed: false, dueDate: '2026-03-12' },
-      { id: 'todo2', text: '跟进五一特惠大促方案审批', completed: false, dueDate: '2026-03-15' }
+      { id: 'todo1', text: '提交2月运营月报', completed: false, dueDate: '2026-03-12', brandName: '新瑞鹏' },
+      { id: 'todo2', text: '跟进五一特惠大促方案审批', completed: false, dueDate: '2026-03-15', brandName: '美团医药' }
     ],
     assets: [
       { id: 'a1', name: '星巴克品牌VI手册.pdf', type: 'PDF', url: '#', uploadDate: '2026-01-10' },
@@ -91,6 +93,10 @@ const initialBrands: Brand[] = [
             templates: [{ name: '阿里生态入驻承诺书.pdf', url: '#' }],
             status: 'COMPLETED'
           }
+        ],
+        listedProducts: [
+          { id: 'lp1', name: '星巴克大杯拿铁', clientProductName: '移动专享-大杯拿铁', status: 'ONLINE', listingTime: '2026-02-15 10:00' },
+          { id: 'lp2', name: '星巴克中杯美式', clientProductName: '阿里88VIP-中杯美式', status: 'ONLINE', listingTime: '2026-02-16 14:30' }
         ]
       },
       channelApi: { completed: true, progress: 100, notes: '双端API已打通' },
@@ -112,6 +118,7 @@ const initialBrands: Brand[] = [
           targetCount: 1,
           currentCount: 1,
           lastRecordDate: '2026-03-08',
+          operator: '张运营',
           records: [{ id: 'r1', date: '2026-03-08', note: '已发送第一周周报' }],
         },
         {
@@ -122,6 +129,7 @@ const initialBrands: Brand[] = [
           targetCount: 3,
           currentCount: 2,
           lastRecordDate: '2026-03-09',
+          operator: '李商务',
           records: [
             { id: 'r2', date: '2026-03-07', note: '电话沟通活动方案' },
             { id: 'r3', date: '2026-03-09', note: '同步客诉处理进度' },
@@ -134,11 +142,18 @@ const initialBrands: Brand[] = [
         { id: 'r3', type: 'MONTHLY', title: '2月运营月报', date: '2026-03-01', status: 'PENDING' },
       ],
       activities: [
-        { id: 'a1', name: '春季新品首发', status: 'ACTIVE' },
-        { id: 'a2', name: '五一特惠大促', status: 'PLANNING' },
-      ],
-      feedbacks: [
-        { id: 'f1', date: '2026-03-05', content: '客户反馈美团侧核销有时延，已安排技术排查。' },
+        { 
+          id: 'a1', title: '春季新品首发', status: 'ACTIVE', time: '2026-03-01 至 2026-03-31',
+          client: '中国移动', products: ['春意抹茶拿铁', '樱花草莓星冰乐'],
+          details: '配合移动全球通积分商城春季上新活动，提供专属折扣。',
+          materials: [{ name: '春季活动主视觉.jpg', url: '#' }, { name: '活动商品清单.xlsx', url: '#' }]
+        },
+        { 
+          id: 'a2', title: '五一特惠大促', status: 'PLANNING', time: '2026-05-01 至 2026-05-07',
+          client: '阿里巴巴', products: ['全场饮品'],
+          details: '参与阿里88VIP五一狂欢节，全场饮品88折。',
+          materials: [{ name: '五一大促报名表.pdf', url: '#' }]
+        },
       ],
     },
     finance: {
@@ -157,7 +172,7 @@ const initialBrands: Brand[] = [
       { id: 'rev1', date: '2026-02-28', title: '春节营销复盘', summary: '抖音本地生活转化率超预期，可复制到其他餐饮品牌。', isReplicable: true },
     ],
     cases: [
-      { id: 'c1', type: 'SUCCESS', title: '春节抖音本地生活爆单', description: '通过达人矩阵配合春节节点，实现单日GMV突破50万。', date: '2026-02-20' }
+      { id: 'c1', type: 'SUCCESS', brandName: '星巴克 (Starbucks)', date: '2026-02-20', client: '抖音本地生活', event: '春节抖音本地生活爆单', summary: '通过达人矩阵配合春节节点，实现单日GMV突破50万。' }
     ],
     operationHistory: [
       { id: 'oh1', date: '2026-03-08 10:00', user: '1310479606@qq.com', action: '添加服务事项', details: '添加了【周报发送】服务' },
@@ -172,6 +187,7 @@ const initialBrands: Brand[] = [
     currentPhase: 'ONBOARDING',
     healthStatus: 'AT_RISK',
     manager: '李四',
+    operators: ['赵运营'],
     todos: [
       { id: 'todo3', text: '催促客户提供ICP备案截图', completed: false, dueDate: '2026-03-11' },
       { id: 'todo4', text: '排查商品同步接口鉴权问题', completed: false, dueDate: '2026-03-10' }
@@ -210,6 +226,9 @@ const initialBrands: Brand[] = [
             templates: [{ name: '农商行商户入驻申请表.docx', url: '#' }],
             status: 'IN_PROGRESS'
           }
+        ],
+        listedProducts: [
+          { id: 'lp3', name: '生椰拿铁', clientProductName: '快手专供-生椰拿铁', status: 'REVIEWING', listingTime: '2026-03-09 16:00' }
         ]
       },
       channelApi: { completed: false, progress: 20, notes: '快手侧资质审核中' },
@@ -218,8 +237,14 @@ const initialBrands: Brand[] = [
       coreMetrics: { salesAmount: 0, orderCount: 0, complaintRate: 0, usageRate: 0, targetReachRate: 0 },
       services: [],
       reports: [],
-      activities: [],
-      feedbacks: [],
+      activities: [
+        { 
+          id: 'a3', title: '周二会员日', status: 'ACTIVE', time: '每周二',
+          client: '农商行', products: ['全场饮品'],
+          details: '农商行信用卡周二买一赠一活动。',
+          materials: [{ name: '活动海报.png', url: '#' }]
+        }
+      ],
     },
     finance: {
       periods: [],
@@ -236,6 +261,7 @@ const initialBrands: Brand[] = [
     currentPhase: 'REVIEW',
     healthStatus: 'HEALTHY',
     manager: '张三',
+    operators: ['王运营', '陈商务'],
     onboarding: {
       signing: { completed: true, taxRate: '6%', paymentMode: '月结', costPriceDesc: '-', settlementMode: 'CPS 4%', annualProcurement: '500W' },
       brandApi: { completed: true, progress: 100, notes: '' },
@@ -249,7 +275,6 @@ const initialBrands: Brand[] = [
         { id: 'r1', type: 'MONTHLY', title: '2月运营月报', date: '2026-03-02', status: 'SUBMITTED' },
       ],
       activities: [],
-      feedbacks: [],
     },
     finance: {
       periods: [
@@ -267,7 +292,7 @@ const initialBrands: Brand[] = [
       { id: 'rev1', date: '2026-03-05', title: '小红书种草复盘', summary: '达人矩阵投放ROI达1:3，建议加大腰部达人比例。', isReplicable: true },
     ],
     cases: [
-      { id: 'c2', type: 'FAILURE', title: '新品首发流量不足', description: '由于预热期过短，导致首发当日自然流量未达预期。', date: '2026-03-01' }
+      { id: 'c2', type: 'FAILURE', brandName: '喜茶 (HEYTEA)', date: '2026-03-01', client: '自有小程序', event: '新品首发流量不足', summary: '由于预热期过短，导致首发当日自然流量未达预期。' }
     ],
     operationHistory: [],
   }

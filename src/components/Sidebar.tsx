@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Target, BookOpen, Settings } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, Settings, Briefcase } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -10,7 +10,8 @@ export function cn(...inputs: ClassValue[]) {
 
 const navigation = [
   { name: '数据看板', href: '/', icon: LayoutDashboard },
-  { name: '品牌管理', href: '/brands', icon: Target },
+  { name: '运营工作台', href: '/workspace', icon: Briefcase },
+  { name: '项目管理', href: '/brands', icon: Target },
   { name: 'SOP 流程库', href: '/sops', icon: BookOpen },
 ];
 

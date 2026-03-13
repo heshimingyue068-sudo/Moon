@@ -13,6 +13,7 @@ import { BrandDetails } from './pages/BrandDetails';
 import { SOPs } from './pages/SOPs';
 import { Chatbot } from './pages/Chatbot';
 import { ImageGenerator } from './pages/ImageGenerator';
+import { OperatorWorkspace } from './pages/OperatorWorkspace';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="brands" element={<Brands />} />
             <Route path="brands/:id" element={<BrandDetails />} />
+            <Route path="workspace" element={<OperatorWorkspace />} />
             <Route path="sops" element={<SOPs />} />
             <Route path="chat" element={<Chatbot />} />
             <Route path="image-gen" element={<ImageGenerator />} />
