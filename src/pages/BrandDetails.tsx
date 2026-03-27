@@ -1580,9 +1580,16 @@ export const BrandDetails: React.FC = () => {
                         <p className={`text-sm font-medium ${todo.completed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{todo.text}</p>
                         <div className="flex items-center gap-2 mt-1">
                           {todo.brandName && <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">{todo.brandName}</span>}
-                          {todo.dueDate && <span className="text-xs text-slate-500">截止日期: {todo.dueDate}</span>}
+                          {todo.dueDate && !todo.completed && <span className="text-xs text-slate-500">截止日期: {todo.dueDate}</span>}
+                          {todo.completed && todo.completedAt && <span className="text-xs text-green-600">完成时间: {todo.completedAt}</span>}
                         </div>
                       </div>
+                      {todo.completed && todo.materialName && (
+                        <button className="flex items-center gap-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors ml-3 shrink-0">
+                          <Download className="w-3 h-3" />
+                          {todo.materialName}
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>

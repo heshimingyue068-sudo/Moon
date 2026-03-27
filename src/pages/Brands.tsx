@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
-import { Search, Plus, Filter, MoreVertical, CheckSquare, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { Search, Plus, Filter, MoreVertical, CheckSquare, X, ChevronRight, ChevronDown, Download } from 'lucide-react';
 import { LifecyclePhase, BrandTodo, Brand } from '../types';
 
 export const Brands: React.FC = () => {
-  const { brands } = useAppContext();
+  const { brands, addBrand, companyEntities } = useAppContext();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [phaseFilter, setPhaseFilter] = useState<LifecyclePhase | 'ALL'>('ALL');
   const [activeTodoModal, setActiveTodoModal] = useState<Brand | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newProject, setNewProject] = useState<Partial<Brand>>({
+    name: '',
+    category: '',
+    manager: '',
+    clientId: '',
+    brandIds: [],
+  });
 
   const toggleProject = (projectId: string) => {
     setExpandedProjects(prev => {
@@ -24,6 +32,74 @@ export const Brands: React.FC = () => {
     });
   };
 
+  const handleAddProject = () => {
+    if (!newProject.name || !newProject.category || !newProject.manager || !newProject.clientId) return;
+    
+    const selectedBrands = companyEntities.filter(e => newProject.brandIds?.includes(e.id)).map(e => e.name);
+
+    const projectToAdd: Brand = {
+      id: `p${Date.now()}`,
+      name: newProject.name,
+      clientId: newProject.clientId,
+      brandIds: newProject.brandIds || [],
+      brands: selectedBrands,
+      logo: `https://picsum.photos/seed/${newProject.name}/200/200`,
+      category: newProject.category,
+      manager: newProject.manager,
+      operators: [],
+      healthStatus: 'HEALTHY',
+      currentPhase: 'ONBOARDING',
+      todos: [],
+      assets: [],
+      operationHistory: [],
+      cases: [],
+      onboarding: {
+        signing: {
+          completed: false,
+          taxRate: '',
+          paymentMode: '',
+          costPriceDesc: '',
+          settlementMode: '',
+          annualProcurement: '',
+        },
+        brandApi: { completed: false, progress: 0, notes: '' },
+        channelListing: { completed: false, channels: [], notes: '' },
+        channelApi: { completed: false, progress: 0, notes: '' },
+      },
+      operations: {
+        coreMetrics: {
+          salesAmount: 0,
+          orderCount: 0,
+          complaintRate: 0,
+          usageRate: 0,
+          targetReachRate: 0,
+        },
+        services: [],
+        reports: [],
+        activities: [],
+      },
+      finance: {
+        periods: [],
+      },
+      reviews: [],
+    };
+
+    addBrand(projectToAdd);
+    setIsAddModalOpen(false);
+    setNewProject({ name: '', category: '', manager: '', clientId: '', brandIds: [] });
+  };
+
+  const toggleSubBrand = (brandId: string) => {
+    setNewProject(prev => {
+      const currentBrands = prev.brandIds || [];
+      if (currentBrands.includes(brandId)) {
+        return { ...prev, brandIds: currentBrands.filter(id => id !== brandId) };
+      } else {
+        return { ...prev, brandIds: [...currentBrands, brandId] };
+      }
+    });
+  };
+
   const filteredBrands = brands.filter(brand => {
     const matchesSearch = brand.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPhase = phaseFilter === 'ALL' || brand.currentPhase === phaseFilter;
@@ -34,7 +110,10 @@ export const Brands: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-slate-900">项目管理 (全生命周期)</h1>
-        <button className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+        <button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+        >
           <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
           新增项目
         </button>
@@ -222,9 +301,16 @@ export const Brands: React.FC = () => {
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           {todo.brandName && <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">{todo.brandName}</span>}
-                          {todo.dueDate && <span className="text-xs text-slate-500">截止日期: {todo.dueDate}</span>}
+                          {todo.dueDate && !todo.completed && <span className="text-xs text-slate-500">截止日期: {todo.dueDate}</span>}
+                          {todo.completed && todo.completedAt && <span className="text-xs text-green-600">完成时间: {todo.completedAt}</span>}
                         </div>
                       </div>
+                      {todo.completed && todo.materialName && (
+                        <button className="flex items-center gap-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors ml-3 shrink-0">
+                          <Download className="w-3 h-3" />
+                          {todo.materialName}
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -241,6 +327,99 @@ export const Brands: React.FC = () => {
                 className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
               >
                 去处理
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Project Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-900">新增项目</h3>
+              <button 
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-slate-400 hover:text-slate-500 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">项目名称</label>
+                <input
+                  type="text"
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  placeholder="例如：杭研宠物大健康项目"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">类目</label>
+                <input
+                  type="text"
+                  value={newProject.category}
+                  onChange={(e) => setNewProject({ ...newProject, category: e.target.value })}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  placeholder="例如：宠物医疗"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">负责人</label>
+                <input
+                  type="text"
+                  value={newProject.manager}
+                  onChange={(e) => setNewProject({ ...newProject, manager: e.target.value })}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  placeholder="例如：张三"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">选择客户</label>
+                <select
+                  value={newProject.clientId || ''}
+                  onChange={(e) => setNewProject({ ...newProject, clientId: e.target.value })}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">请选择客户...</option>
+                  {companyEntities.filter(e => e.type === 'CLIENT').map(client => (
+                    <option key={client.id} value={client.id}>{client.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">选择品牌 (可多选)</label>
+                <div className="border border-slate-300 rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                  {companyEntities.filter(e => e.type === 'BRAND').map(brand => (
+                    <label key={brand.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(newProject.brandIds || []).includes(brand.id)}
+                        onChange={() => toggleSubBrand(brand.id)}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-sm text-slate-700">{brand.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <button 
+                onClick={() => setIsAddModalOpen(false)}
+                className="inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
+              >
+                取消
+              </button>
+              <button 
+                onClick={handleAddProject}
+                disabled={!newProject.name || !newProject.category || !newProject.manager || !newProject.clientId}
+                className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                确认新增
               </button>
             </div>
           </div>

@@ -54,7 +54,12 @@ export interface BrandTodo {
   text: string;
   completed: boolean;
   dueDate?: string;
+  completedAt?: string;
   brandName?: string;
+  cc?: string[];
+  operator?: string;
+  materialName?: string;
+  materialUrl?: string;
 }
 
 export interface BrandAsset {
@@ -91,9 +96,33 @@ export interface ListedProduct {
   listingTime: string;
 }
 
+export interface Operator {
+  id: string;
+  name: string;
+  avatar: string;
+  title: string;
+  email?: string;
+  phone?: string;
+  department?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface CompanyEntity {
+  id: string;
+  name: string;
+  type: 'CLIENT' | 'BRAND';
+  logo: string;
+  contactPerson?: string;
+  contactPhone?: string;
+  contractDetails?: ContractDetails;
+  resources?: { id: string; name: string; type: string; url: string; uploadTime: string }[];
+}
+
 export interface Brand {
   id: string;
   name: string;
+  clientId?: string;
+  brandIds?: string[];
   brands?: string[];
   logo: string;
   category: string;

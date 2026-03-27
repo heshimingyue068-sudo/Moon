@@ -14,6 +14,9 @@ import { SOPs } from './pages/SOPs';
 import { Chatbot } from './pages/Chatbot';
 import { ImageGenerator } from './pages/ImageGenerator';
 import { OperatorWorkspace } from './pages/OperatorWorkspace';
+import { BrandList } from './pages/BrandList';
+import { CompanyInfo } from './pages/CompanyInfo';
+import { OperatorManagement } from './pages/OperatorManagement';
 
 export default function App() {
   return (
@@ -23,8 +26,11 @@ export default function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="brands" element={<Brands />} />
+            <Route path="brand-list" element={<BrandList />} />
+            <Route path="company/:id" element={<CompanyInfo />} />
             <Route path="brands/:id" element={<BrandDetails />} />
             <Route path="workspace" element={<OperatorWorkspace />} />
+            <Route path="operators" element={<OperatorManagement />} />
             <Route path="sops" element={<SOPs />} />
             <Route path="chat" element={<Chatbot />} />
             <Route path="image-gen" element={<ImageGenerator />} />
