@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Brand, ServiceTemplate, Operator, CompanyEntity } from './types';
+import { Brand, ServiceTemplate, Operator, CompanyEntity, ServiceItem, ReportTemplate } from './types';
 
 interface AppState {
   brands: Brand[];
@@ -12,6 +12,16 @@ interface AppState {
   addOperator: (operator: Operator) => void;
   deleteOperator: (id: string) => void;
   companyEntities: CompanyEntity[];
+  updateCompanyEntity: (id: string, entity: Partial<CompanyEntity>) => void;
+  addCompanyEntity: (entity: CompanyEntity) => void;
+  serviceItems: ServiceItem[];
+  addServiceItem: (item: ServiceItem) => void;
+  updateServiceItem: (id: string, item: Partial<ServiceItem>) => void;
+  deleteServiceItem: (id: string) => void;
+  reportTemplates: ReportTemplate[];
+  addReportTemplate: (template: ReportTemplate) => void;
+  updateReportTemplate: (id: string, template: Partial<ReportTemplate>) => void;
+  deleteReportTemplate: (id: string) => void;
 }
 
 const initialOperators: Operator[] = [
@@ -23,12 +33,12 @@ const initialOperators: Operator[] = [
 ];
 
 const initialCompanyEntities: CompanyEntity[] = [
-  { id: 'ce1', name: '星巴克', type: 'BRAND', logo: 'https://picsum.photos/seed/starbucks/100/100', contactPerson: '李星', contactPhone: '13800000001', contractDetails: { status: 'SIGNED', partyA: '星巴克', partyB: '我方', validFrom: '2025-01-01', validTo: '2026-12-31', files: [] }, resources: [{ id: 'r1', name: '星巴克品牌VI手册.pdf', type: 'PDF', url: '#', uploadTime: '2026-01-10 10:00' }, { id: 'r2', name: '星巴克门店列表.xlsx', type: 'EXCEL', url: '#', uploadTime: '2026-01-12 14:30' }] },
-  { id: 'ce2', name: '瑞幸咖啡', type: 'BRAND', logo: 'https://picsum.photos/seed/luckin/100/100', contactPerson: '王瑞', contactPhone: '13800000002', contractDetails: { status: 'SIGNED', partyA: '瑞幸', partyB: '我方', validFrom: '2025-06-01', validTo: '2026-05-31', files: [] }, resources: [{ id: 'r3', name: '瑞幸产品清单.xlsx', type: 'EXCEL', url: '#', uploadTime: '2026-02-15 09:00' }] },
-  { id: 'ce3', name: '新瑞鹏', type: 'BRAND', logo: 'https://picsum.photos/seed/ruipeng/100/100', contactPerson: '张鹏', contactPhone: '13800000003', contractDetails: { status: 'SIGNED', partyA: '新瑞鹏', partyB: '我方', validFrom: '2026-01-01', validTo: '2026-12-31', files: [] }, resources: [] },
-  { id: 'ce4', name: '中国移动', type: 'CLIENT', logo: 'https://picsum.photos/seed/cmcc/100/100', contactPerson: '赵移', contactPhone: '13800000004', contractDetails: { status: 'SIGNED', partyA: '中国移动', partyB: '我方', validFrom: '2024-01-01', validTo: '2026-12-31', files: [] }, resources: [{ id: 'r4', name: '中国移动合作规范.pdf', type: 'PDF', url: '#', uploadTime: '2024-01-05 11:00' }] },
-  { id: 'ce5', name: '美团医药', type: 'CLIENT', logo: 'https://picsum.photos/seed/meituan/100/100', contactPerson: '刘美', contactPhone: '13800000005', contractDetails: { status: 'DRAFT', partyA: '美团', partyB: '我方', validFrom: '2026-04-01', validTo: '2027-03-31', files: [] }, resources: [] },
-  { id: 'ce6', name: '阿里巴巴', type: 'CLIENT', logo: 'https://picsum.photos/seed/alibaba/100/100', contactPerson: '马云', contactPhone: '13800000006', contractDetails: { status: 'EXPIRED', partyA: '阿里巴巴', partyB: '我方', validFrom: '2023-01-01', validTo: '2025-12-31', files: [] }, resources: [] },
+  { id: 'ce1', name: '星巴克', type: 'BRAND', logo: 'https://picsum.photos/seed/starbucks/100/100', contactPerson: '李星', contactPhone: '13800000001', manager: '张运营', contractDetails: { status: 'SIGNED', partyA: '星巴克', partyB: '我方', validFrom: '2025-01-01', validTo: '2026-12-31', files: [] }, resources: [{ id: 'r1', name: '星巴克品牌VI手册.pdf', type: 'PDF', url: '#', uploadTime: '2026-01-10 10:00' }, { id: 'r2', name: '星巴克门店列表.xlsx', type: 'EXCEL', url: '#', uploadTime: '2026-01-12 14:30' }], relatedEntityIds: ['ce4', 'ce6'] },
+  { id: 'ce2', name: '瑞幸咖啡', type: 'BRAND', logo: 'https://picsum.photos/seed/luckin/100/100', contactPerson: '王瑞', contactPhone: '13800000002', manager: '李商务', contractDetails: { status: 'SIGNED', partyA: '瑞幸', partyB: '我方', validFrom: '2025-06-01', validTo: '2026-05-31', files: [] }, resources: [{ id: 'r3', name: '瑞幸产品清单.xlsx', type: 'EXCEL', url: '#', uploadTime: '2026-02-15 09:00' }], relatedEntityIds: ['ce4'] },
+  { id: 'ce3', name: '新瑞鹏', type: 'BRAND', logo: 'https://picsum.photos/seed/ruipeng/100/100', contactPerson: '张鹏', contactPhone: '13800000003', manager: '王经理', contractDetails: { status: 'SIGNED', partyA: '新瑞鹏', partyB: '我方', validFrom: '2026-01-01', validTo: '2026-12-31', files: [] }, resources: [], relatedEntityIds: ['ce5'] },
+  { id: 'ce4', name: '中国移动', type: 'CLIENT', logo: 'https://picsum.photos/seed/cmcc/100/100', contactPerson: '赵移', contactPhone: '13800000004', manager: '赵专员', contractDetails: { status: 'SIGNED', partyA: '中国移动', partyB: '我方', validFrom: '2024-01-01', validTo: '2026-12-31', files: [] }, resources: [{ id: 'r4', name: '中国移动合作规范.pdf', type: 'PDF', url: '#', uploadTime: '2024-01-05 11:00' }], relatedEntityIds: ['ce1', 'ce2'] },
+  { id: 'ce5', name: '美团医药', type: 'CLIENT', logo: 'https://picsum.photos/seed/meituan/100/100', contactPerson: '刘美', contactPhone: '13800000005', manager: '刘策划', contractDetails: { status: 'DRAFT', partyA: '美团', partyB: '我方', validFrom: '2026-04-01', validTo: '2027-03-31', files: [] }, resources: [], relatedEntityIds: ['ce3'] },
+  { id: 'ce6', name: '阿里巴巴', type: 'CLIENT', logo: 'https://picsum.photos/seed/alibaba/100/100', contactPerson: '马云', contactPhone: '13800000006', manager: '张运营', contractDetails: { status: 'EXPIRED', partyA: '阿里巴巴', partyB: '我方', validFrom: '2023-01-01', validTo: '2025-12-31', files: [] }, resources: [], relatedEntityIds: ['ce1'] },
 ];
 
 const initialServiceTemplates: ServiceTemplate[] = [
@@ -62,6 +72,8 @@ const initialBrands: Brand[] = [
   {
     id: '1',
     name: '杭研宠物大健康项目',
+    clientId: 'ce6',
+    brandIds: ['ce3'],
     brands: ['新瑞鹏', '美团医药'],
     logo: 'https://picsum.photos/seed/pethealth/100/100',
     category: '宠物健康',
@@ -70,17 +82,17 @@ const initialBrands: Brand[] = [
     manager: '王经理',
     operators: ['张运营', '李商务'],
     todos: [
-      { id: 'todo1', text: '提交2月运营月报', completed: false, dueDate: '2026-03-26', brandName: '新瑞鹏', operator: '张运营' },
-      { id: 'todo2', text: '跟进五一特惠大促方案审批', completed: false, dueDate: '2026-03-26', brandName: '美团医药', operator: '李商务' },
-      { id: 'todo_today1', text: '上传星巴克春季活动总结', completed: false, dueDate: '2026-03-26', brandName: '星巴克', operator: '张运营' },
-      { id: 'todo_today2', text: '审核瑞幸咖啡物料', completed: false, dueDate: '2026-03-26', brandName: '瑞幸咖啡', operator: '王经理' },
-      { id: 'todo_today3', text: '确认新瑞鹏本周投放计划', completed: false, dueDate: '2026-03-26', brandName: '新瑞鹏', operator: '张运营' },
-      { id: 'todo_today4', text: '发送美团医药活动复盘', completed: false, dueDate: '2026-03-26', brandName: '美团医药', operator: '王经理' },
-      { id: 'todo_today5', text: '整理宠物健康行业竞品分析', completed: false, dueDate: '2026-03-26', brandName: '新瑞鹏', operator: '张运营' },
-      { id: 'todo_today6', text: '准备下周一的客户周会PPT', completed: false, dueDate: '2026-03-26', brandName: '美团医药', operator: '张运营' },
-      { id: 'todo_today7', text: '核对本月广告投放账单', completed: false, dueDate: '2026-03-26', brandName: '新瑞鹏', operator: '王经理' },
-      { id: 'todo_completed1', text: '更新星巴克春季新品物料', completed: true, dueDate: '2026-03-05', completedAt: '2026-03-05 14:30', operator: '李商务', materialName: '星巴克春季新品物料_v2.zip', materialUrl: '#' },
-      { id: 'todo_completed2', text: '提交第一季度预算申请', completed: true, dueDate: '2026-03-20', completedAt: '2026-03-19 10:15', operator: '张运营', materialName: 'Q1预算申请表.xlsx', materialUrl: '#' }
+      { id: 'todo1', text: '提交3月运营月报', completed: false, dueDate: '2026-03-31', brandName: '新瑞鹏', operator: '张运营' },
+      { id: 'todo2', text: '跟进五一特惠大促方案审批', completed: false, dueDate: '2026-04-05', brandName: '美团医药', operator: '李商务' },
+      { id: 'todo_today1', text: '上传星巴克春季活动总结', completed: false, dueDate: '2026-03-29', brandName: '星巴克', operator: '张运营' },
+      { id: 'todo_today2', text: '审核瑞幸咖啡物料', completed: false, dueDate: '2026-03-29', brandName: '瑞幸咖啡', operator: '王经理' },
+      { id: 'todo_today3', text: '确认新瑞鹏本周投放计划', completed: false, dueDate: '2026-03-30', brandName: '新瑞鹏', operator: '张运营' },
+      { id: 'todo_today4', text: '发送美团医药活动复盘', completed: false, dueDate: '2026-03-30', brandName: '美团医药', operator: '王经理' },
+      { id: 'todo_today5', text: '整理宠物健康行业竞品分析', completed: false, dueDate: '2026-03-31', brandName: '新瑞鹏', operator: '张运营' },
+      { id: 'todo_today6', text: '准备下周一的客户周会PPT', completed: false, dueDate: '2026-03-29', brandName: '美团医药', operator: '张运营' },
+      { id: 'todo_today7', text: '核对本月广告投放账单', completed: false, dueDate: '2026-03-31', brandName: '新瑞鹏', operator: '王经理' },
+      { id: 'todo_completed1', text: '更新星巴克春季新品物料', completed: true, dueDate: '2026-03-25', completedAt: '2026-03-25 14:30', operator: '李商务', materialName: '星巴克春季新品物料_v2.zip', materialUrl: '#' },
+      { id: 'todo_completed2', text: '提交第一季度预算申请', completed: true, dueDate: '2026-03-28', completedAt: '2026-03-28 10:15', operator: '张运营', materialName: 'Q1预算申请表.xlsx', materialUrl: '#' }
     ],
     assets: [
       { id: 'a1', name: '星巴克品牌VI手册.pdf', type: 'PDF', url: '#', uploadDate: '2026-01-10' },
@@ -169,9 +181,10 @@ const initialBrands: Brand[] = [
         },
       ],
       reports: [
-        { id: 'r1', type: 'DAILY', title: '3月9日运营日报', date: '2026-03-09', status: 'SUBMITTED' },
-        { id: 'r2', type: 'WEEKLY', title: '3月第一周周报', date: '2026-03-08', status: 'SUBMITTED' },
-        { id: 'r3', type: 'MONTHLY', title: '2月运营月报', date: '2026-03-01', status: 'PENDING' },
+        { id: 'r1', type: 'DAILY', title: '3月28日运营日报', date: '2026-03-28', status: 'SUBMITTED', operator: '张运营' },
+        { id: 'r2', type: 'WEEKLY', title: '3月第四周周报', date: '2026-03-29', status: 'SUBMITTED', operator: '李商务' },
+        { id: 'r3', type: 'MONTHLY', title: '3月运营月报', date: '2026-03-31', status: 'PENDING', operator: '张运营' },
+        { id: 'r3_old', type: 'MONTHLY', title: '2月运营月报', date: '2026-03-01', status: 'SUBMITTED', operator: '张运营' },
       ],
       activities: [
         { 
@@ -190,6 +203,14 @@ const initialBrands: Brand[] = [
     },
     finance: {
       periods: [
+        {
+          id: 'p2',
+          periodName: '2026年3月',
+          reconciliation: { status: 'PENDING', clientAmount: 520000, brandAmount: 490000 },
+          settlement: { status: 'PENDING', amount: 0 },
+          invoicing: { status: 'PENDING', amount: 0 },
+          collection: { status: 'PENDING', amount: 0 },
+        },
         {
           id: 'p1',
           periodName: '2026年2月',
@@ -210,10 +231,24 @@ const initialBrands: Brand[] = [
       { id: 'oh1', date: '2026-03-08 10:00', user: '1310479606@qq.com', action: '添加服务事项', details: '添加了【周报发送】服务' },
       { id: 'oh2', date: '2026-03-09 14:30', user: '1310479606@qq.com', action: '更新财务状态', details: '将2026年2月结算状态标记为已完成' }
     ],
+    contracts: [
+      {
+        id: 'con1',
+        name: '星巴克2026年度合作协议',
+        status: 'SIGNED',
+        partyA: '星巴克企业管理（中国）有限公司',
+        partyB: '杭州某某科技有限公司',
+        validFrom: '2026-01-01',
+        validTo: '2026-12-31',
+        files: [{ name: '星巴克2026年度合作协议.pdf', url: '#' }]
+      }
+    ]
   },
   {
     id: '2',
     name: '瑞幸咖啡 (Luckin)',
+    clientId: 'ce4',
+    brandIds: ['ce2'],
     logo: 'https://picsum.photos/seed/luckin/100/100',
     category: '餐饮美食',
     currentPhase: 'ONBOARDING',
@@ -221,8 +256,8 @@ const initialBrands: Brand[] = [
     manager: '李四',
     operators: ['赵运营'],
     todos: [
-      { id: 'todo3', text: '催促客户提供ICP备案截图', completed: false, dueDate: '2026-03-11' },
-      { id: 'todo4', text: '排查商品同步接口鉴权问题', completed: false, dueDate: '2026-03-10' }
+      { id: 'todo3', text: '催促客户提供ICP备案截图', completed: false, dueDate: '2026-03-30' },
+      { id: 'todo4', text: '排查商品同步接口鉴权问题', completed: false, dueDate: '2026-03-29' }
     ],
     assets: [
       { id: 'a3', name: '瑞幸产品清单.xlsx', type: 'EXCEL', url: '#', uploadDate: '2026-02-15' }
@@ -268,7 +303,10 @@ const initialBrands: Brand[] = [
     operations: {
       coreMetrics: { salesAmount: 0, orderCount: 0, complaintRate: 0, usageRate: 0, targetReachRate: 0 },
       services: [],
-      reports: [],
+      reports: [
+        { id: 'r4', type: 'DAILY', title: '3月28日运营日报', date: '2026-03-28', status: 'SUBMITTED', operator: '赵专员' },
+        { id: 'r5', type: 'WEEKLY', title: '3月第四周周报', date: '2026-03-29', status: 'SUBMITTED', operator: '王经理' },
+      ],
       activities: [
         { 
           id: 'a3', title: '周二会员日', status: 'ACTIVE', time: '每周二',
@@ -284,10 +322,24 @@ const initialBrands: Brand[] = [
     reviews: [],
     cases: [],
     operationHistory: [],
+    contracts: [
+      {
+        id: 'con2',
+        name: '瑞幸咖啡合作协议',
+        status: 'SIGNED',
+        partyA: '瑞幸咖啡（中国）有限公司',
+        partyB: '杭州某某科技有限公司',
+        validFrom: '2025-06-01',
+        validTo: '2026-05-31',
+        files: []
+      }
+    ]
   },
   {
     id: '3',
     name: '喜茶 (HEYTEA)',
+    clientId: 'ce6',
+    brandIds: ['ce1'],
     logo: 'https://picsum.photos/seed/heytea/100/100',
     category: '餐饮美食',
     currentPhase: 'REVIEW',
@@ -295,7 +347,22 @@ const initialBrands: Brand[] = [
     manager: '张三',
     operators: ['王运营', '陈商务'],
     onboarding: {
-      signing: { completed: true, taxRate: '6%', paymentMode: '月结', costPriceDesc: '-', settlementMode: 'CPS 4%', annualProcurement: '500W' },
+      signing: { 
+        completed: true, 
+        taxRate: '6%', 
+        paymentMode: '月结', 
+        costPriceDesc: '-', 
+        settlementMode: 'CPS 4%', 
+        annualProcurement: '500W',
+        contractDetails: {
+          status: 'SIGNED',
+          partyA: '喜茶（深圳）企业管理有限责任公司',
+          partyB: '杭州某某科技有限公司',
+          validFrom: '2025-08-01',
+          validTo: '2026-07-31',
+          files: [{ name: '喜茶年度合作协议.pdf', url: '#' }]
+        }
+      },
       brandApi: { completed: true, progress: 100, notes: '' },
       channelListing: { completed: true, channels: ['小红书'], notes: '' },
       channelApi: { completed: true, progress: 100, notes: '' },
@@ -304,7 +371,8 @@ const initialBrands: Brand[] = [
       coreMetrics: { salesAmount: 800000, orderCount: 20000, complaintRate: 0.05, usageRate: 92, targetReachRate: 105 },
       services: [],
       reports: [
-        { id: 'r1', type: 'MONTHLY', title: '2月运营月报', date: '2026-03-02', status: 'SUBMITTED' },
+        { id: 'r9', type: 'MONTHLY', title: '3月运营月报', date: '2026-03-31', status: 'PENDING', operator: '王运营' },
+        { id: 'r9_old', type: 'MONTHLY', title: '2月运营月报', date: '2026-03-02', status: 'SUBMITTED', operator: '王运营' },
       ],
       activities: [],
     },
@@ -327,6 +395,7 @@ const initialBrands: Brand[] = [
       { id: 'c2', type: 'FAILURE', brandName: '喜茶 (HEYTEA)', date: '2026-03-01', client: '自有小程序', event: '新品首发流量不足', summary: '由于预热期过短，导致首发当日自然流量未达预期。' }
     ],
     operationHistory: [],
+    contracts: []
   },
   {
     id: '4',
@@ -344,9 +413,27 @@ const initialBrands: Brand[] = [
       { id: 'todo5', text: '对账单核对', completed: false, dueDate: '2026-03-28', brandName: '星巴克' },
       { id: 'todo6', text: '瑞幸新品上架配置', completed: true, dueDate: '2026-03-25', brandName: '瑞幸咖啡' }
     ],
-    assets: [],
+    assets: [
+      { id: 'a4', name: '移动权益合作方案.pdf', type: 'PDF', url: '#', uploadDate: '2026-03-01 10:00' },
+      { id: 'a5', name: '活动素材包.zip', type: 'ZIP', url: '#', uploadDate: '2026-03-05 14:30' }
+    ],
     onboarding: {
-      signing: { completed: true, taxRate: '6%', paymentMode: '月结', costPriceDesc: '', settlementMode: '', annualProcurement: '' },
+      signing: { 
+        completed: true, 
+        taxRate: '6%', 
+        paymentMode: '月结', 
+        costPriceDesc: '基础服务费 10W/月', 
+        settlementMode: 'CPS 5%', 
+        annualProcurement: '预估 2000W',
+        contractDetails: {
+          status: 'SIGNED',
+          partyA: '中国移动通信集团有限公司',
+          partyB: '杭州某某科技有限公司',
+          validFrom: '2025-01-01',
+          validTo: '2026-12-31',
+          files: [{ name: '中国移动权益合作协议.pdf', url: '#' }]
+        }
+      },
       brandApi: { completed: true, progress: 100, notes: '' },
       channelListing: { completed: true, channels: ['中国移动'], notes: '' },
       channelApi: { completed: true, progress: 100, notes: '' }
@@ -354,13 +441,21 @@ const initialBrands: Brand[] = [
     operations: {
       coreMetrics: { salesAmount: 1250000, orderCount: 35000, complaintRate: 0.05, usageRate: 0.85, targetReachRate: 0.92 },
       services: [],
-      reports: [],
+      reports: [
+        { id: 'r6_d1', type: 'DAILY', title: '3月29日运营日报', date: '2026-03-29', status: 'SUBMITTED', operator: '张运营' },
+        { id: 'r6_d2', type: 'DAILY', title: '3月28日运营日报', date: '2026-03-28', status: 'SUBMITTED', operator: '赵专员' },
+        { id: 'r6_d3', type: 'DAILY', title: '3月27日运营日报', date: '2026-03-27', status: 'SUBMITTED', operator: '张运营' },
+        { id: 'r6', type: 'MONTHLY', title: '3月运营月报', date: '2026-03-31', status: 'PENDING', operator: '张运营' },
+        { id: 'r6_old', type: 'MONTHLY', title: '2月运营月报', date: '2026-03-01', status: 'SUBMITTED', operator: '张运营' },
+        { id: 'r7', type: 'WEEKLY', title: '3月第四周周报', date: '2026-03-29', status: 'SUBMITTED', operator: '赵专员' },
+      ],
       activities: []
     },
     finance: { periods: [] },
     reviews: [],
     cases: [],
-    operationHistory: []
+    operationHistory: [],
+    contracts: []
   },
   {
     id: '5',
@@ -377,9 +472,26 @@ const initialBrands: Brand[] = [
     todos: [
       { id: 'todo7', text: '输出Q1季度复盘报告', completed: false, dueDate: '2026-04-10', brandName: '新瑞鹏' }
     ],
-    assets: [],
+    assets: [
+      { id: 'a6', name: '美团医药健康卡介绍.pptx', type: 'PPT', url: '#', uploadDate: '2026-03-10 09:00' }
+    ],
     onboarding: {
-      signing: { completed: true, taxRate: '6%', paymentMode: '月结', costPriceDesc: '', settlementMode: '', annualProcurement: '' },
+      signing: { 
+        completed: true, 
+        taxRate: '6%', 
+        paymentMode: '月结', 
+        costPriceDesc: '基础服务费 5W/月', 
+        settlementMode: 'CPS 3%', 
+        annualProcurement: '预估 500W',
+        contractDetails: {
+          status: 'SIGNED',
+          partyA: '北京三快在线科技有限公司(美团)',
+          partyB: '杭州某某科技有限公司',
+          validFrom: '2025-06-01',
+          validTo: '2026-05-31',
+          files: [{ name: '美团医药健康卡合作协议.pdf', url: '#' }]
+        }
+      },
       brandApi: { completed: true, progress: 100, notes: '' },
       channelListing: { completed: true, channels: ['美团医药'], notes: '' },
       channelApi: { completed: true, progress: 100, notes: '' }
@@ -387,13 +499,30 @@ const initialBrands: Brand[] = [
     operations: {
       coreMetrics: { salesAmount: 850000, orderCount: 12000, complaintRate: 0.01, usageRate: 0.95, targetReachRate: 1.1 },
       services: [],
-      reports: [],
+      reports: [
+        { id: 'r8_d1', type: 'DAILY', title: '3月29日运营日报', date: '2026-03-29', status: 'SUBMITTED', operator: '刘策划' },
+        { id: 'r8', type: 'DAILY', title: '3月28日运营日报', date: '2026-03-28', status: 'SUBMITTED', operator: '刘策划' },
+        { id: 'r8_d2', type: 'DAILY', title: '3月27日运营日报', date: '2026-03-27', status: 'SUBMITTED', operator: '刘策划' },
+        { id: 'r8_w1', type: 'WEEKLY', title: '3月第四周周报', date: '2026-03-29', status: 'SUBMITTED', operator: '刘策划' },
+      ],
       activities: []
     },
     finance: { periods: [] },
     reviews: [],
     cases: [],
-    operationHistory: []
+    operationHistory: [],
+    contracts: [
+      {
+        id: 'con3',
+        name: '新瑞鹏合作协议',
+        status: 'SIGNED',
+        partyA: '新瑞鹏宠物医疗集团',
+        partyB: '杭州某某科技有限公司',
+        validFrom: '2026-01-01',
+        validTo: '2026-12-31',
+        files: []
+      }
+    ]
   }
 ];
 
@@ -404,7 +533,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [serviceTemplates, setServiceTemplates] = useState<ServiceTemplate[]>(initialServiceTemplates);
 
   const [operators, setOperators] = useState<Operator[]>(initialOperators);
-  const [companyEntities] = useState<CompanyEntity[]>(initialCompanyEntities);
+  const [companyEntities, setCompanyEntities] = useState<CompanyEntity[]>(initialCompanyEntities);
+  const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
+  const [reportTemplates, setReportTemplates] = useState<ReportTemplate[]>([]);
+
+  const addServiceItem = (item: ServiceItem) => setServiceItems(prev => [...prev, item]);
+  const updateServiceItem = (id: string, updatedItem: Partial<ServiceItem>) => 
+    setServiceItems(prev => prev.map(item => item.id === id ? { ...item, ...updatedItem } : item));
+  const deleteServiceItem = (id: string) => setServiceItems(prev => prev.filter(item => item.id !== id));
+
+  const addReportTemplate = (template: ReportTemplate) => setReportTemplates(prev => [...prev, template]);
+  const updateReportTemplate = (id: string, updatedTemplate: Partial<ReportTemplate>) => 
+    setReportTemplates(prev => prev.map(template => template.id === id ? { ...template, ...updatedTemplate } : template));
+  const deleteReportTemplate = (id: string) => setReportTemplates(prev => prev.filter(template => template.id !== id));
+
+  const updateCompanyEntity = (id: string, updatedEntity: Partial<CompanyEntity>) => {
+    setCompanyEntities((prev) =>
+      prev.map((entity) => (entity.id === id ? { ...entity, ...updatedEntity } : entity))
+    );
+  };
+
+  const addCompanyEntity = (entity: CompanyEntity) => {
+    setCompanyEntities((prev) => [...prev, entity]);
+  };
 
   const updateBrand = (id: string, updatedBrand: Partial<Brand>) => {
     setBrands((prev) =>
@@ -439,7 +590,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       brands, updateBrand, addBrand, 
       serviceTemplates, addServiceTemplate, 
       operators, updateOperator, addOperator, deleteOperator,
-      companyEntities 
+      companyEntities, updateCompanyEntity, addCompanyEntity,
+      serviceItems, addServiceItem, updateServiceItem, deleteServiceItem,
+      reportTemplates, addReportTemplate, updateReportTemplate, deleteReportTemplate
     }}>
       {children}
     </AppContext.Provider>

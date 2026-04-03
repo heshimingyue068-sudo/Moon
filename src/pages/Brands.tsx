@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
-import { Search, Plus, Filter, MoreVertical, CheckSquare, X, ChevronRight, ChevronDown, Download } from 'lucide-react';
+import { Search, Plus, Filter, MoreVertical, CheckSquare, X, ChevronRight, ChevronDown, Download, Settings } from 'lucide-react';
 import { LifecyclePhase, BrandTodo, Brand } from '../types';
+import { EntityServiceConfig } from '../components/EntityServiceConfig';
 
 export const Brands: React.FC = () => {
   const { brands, addBrand, companyEntities } = useAppContext();
@@ -10,14 +11,23 @@ export const Brands: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [phaseFilter, setPhaseFilter] = useState<LifecyclePhase | 'ALL'>('ALL');
   const [activeTodoModal, setActiveTodoModal] = useState<Brand | null>(null);
+  const [configServiceModal, setConfigServiceModal] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newProject, setNewProject] = useState<Partial<Brand>>({
+  const [newProject, setNewProject] = useState<Partial<Brand> & { contractDetails?: any }>({
     name: '',
     category: '',
     manager: '',
     clientId: '',
     brandIds: [],
+    contractDetails: {
+      status: 'DRAFT',
+      partyA: '',
+      partyB: '',
+      validFrom: '',
+      validTo: '',
+      files: []
+    }
   });
 
   const toggleProject = (projectId: string) => {
@@ -30,6 +40,23 @@ export const Brands: React.FC = () => {
       }
       return newSet;
     });
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, qualType: string) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files).map(f => ({
+        id: `a${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: `${qualType}_${f.name}`,
+        type: 'OTHER' as const,
+        url: URL.createObjectURL(f),
+        uploadDate: new Date().toISOString().split('T')[0]
+      }));
+      
+      setNewProject(prev => ({
+        ...prev,
+        assets: [...(prev.assets || []), ...files]
+      }));
+    }
   };
 
   const handleAddProject = () => {
@@ -61,6 +88,7 @@ export const Brands: React.FC = () => {
           costPriceDesc: '',
           settlementMode: '',
           annualProcurement: '',
+          contractDetails: newProject.contractDetails,
         },
         brandApi: { completed: false, progress: 0, notes: '' },
         channelListing: { completed: false, channels: [], notes: '' },
@@ -82,11 +110,15 @@ export const Brands: React.FC = () => {
         periods: [],
       },
       reviews: [],
+      contracts: newProject.contractDetails ? [newProject.contractDetails] : [],
     };
 
     addBrand(projectToAdd);
     setIsAddModalOpen(false);
-    setNewProject({ name: '', category: '', manager: '', clientId: '', brandIds: [] });
+    setNewProject({ 
+      name: '', category: '', manager: '', clientId: '', brandIds: [],
+      contractDetails: { status: 'DRAFT', partyA: '', partyB: '', validFrom: '', validTo: '', files: [] }
+    });
   };
 
   const toggleSubBrand = (brandId: string) => {
@@ -150,7 +182,7 @@ export const Brands: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
         {filteredBrands.map((brand) => (
           <div
             key={brand.id}
@@ -190,6 +222,16 @@ export const Brands: React.FC = () => {
                       {brand.todos.filter(t => !t.completed).length} 待办
                     </button>
                   )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfigServiceModal(brand.id);
+                    }}
+                    className="inline-flex items-center justify-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-600 ring-1 ring-inset ring-indigo-500/10 hover:bg-indigo-100 transition-colors"
+                  >
+                    <Settings className="mr-1 h-3.5 w-3.5" />
+                    配置服务
+                  </button>
                   {brand.brands && brand.brands.length > 0 ? (
                     <button className="text-slate-400 hover:text-slate-600" onClick={(e) => { e.stopPropagation(); toggleProject(brand.id); }}>
                       {expandedProjects.has(brand.id) ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
@@ -406,6 +448,100 @@ export const Brands: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              <div className="pt-4 border-t border-slate-200">
+                <h4 className="text-sm font-medium text-slate-900 mb-3">合同信息</h4>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">合同状态</label>
+                    <select
+                      value={newProject.contractDetails?.status || 'DRAFT'}
+                      onChange={(e) => setNewProject({
+                        ...newProject,
+                        contractDetails: { ...newProject.contractDetails!, status: e.target.value as any }
+                      })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value="DRAFT">草稿</option>
+                      <option value="SIGNED">已签署</option>
+                      <option value="EXPIRED">已过期</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">甲方 (客户)</label>
+                    <input
+                      type="text"
+                      value={newProject.contractDetails?.partyA || ''}
+                      onChange={(e) => setNewProject({
+                        ...newProject,
+                        contractDetails: { ...newProject.contractDetails!, partyA: e.target.value }
+                      })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      placeholder="甲方名称"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">乙方 (服务商)</label>
+                    <input
+                      type="text"
+                      value={newProject.contractDetails?.partyB || ''}
+                      onChange={(e) => setNewProject({
+                        ...newProject,
+                        contractDetails: { ...newProject.contractDetails!, partyB: e.target.value }
+                      })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      placeholder="乙方名称"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">生效日期</label>
+                    <input
+                      type="date"
+                      value={newProject.contractDetails?.validFrom || ''}
+                      onChange={(e) => setNewProject({
+                        ...newProject,
+                        contractDetails: { ...newProject.contractDetails!, validFrom: e.target.value }
+                      })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">失效日期</label>
+                    <input
+                      type="date"
+                      value={newProject.contractDetails?.validTo || ''}
+                      onChange={(e) => setNewProject({
+                        ...newProject,
+                        contractDetails: { ...newProject.contractDetails!, validTo: e.target.value }
+                      })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-700 mb-1">合同附件</label>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          const files = Array.from(e.target.files).map(f => ({
+                            name: f.name,
+                            url: URL.createObjectURL(f)
+                          }));
+                          setNewProject(prev => ({
+                            ...prev,
+                            contractDetails: {
+                              ...prev.contractDetails!,
+                              files: [...(prev.contractDetails?.files || []), ...files]
+                            }
+                          }));
+                        }
+                      }}
+                      className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
               <button 
@@ -421,6 +557,26 @@ export const Brands: React.FC = () => {
               >
                 确认新增
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Config Service Modal */}
+      {configServiceModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-4xl rounded-xl bg-white shadow-xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-900">配置项目服务事项</h3>
+              <button
+                onClick={() => setConfigServiceModal(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+              <EntityServiceConfig entityId={configServiceModal} />
             </div>
           </div>
         </div>

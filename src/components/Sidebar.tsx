@@ -12,6 +12,7 @@ const navigation = [
   { name: '数据看板', href: '/', icon: LayoutDashboard },
   { name: '运营工作台', href: '/workspace', icon: Briefcase },
   { name: '项目管理', href: '/brands', icon: Target },
+  { name: '客户管理', href: '/clients', icon: Users },
   { name: '品牌管理', href: '/brand-list', icon: Tag },
   { name: 'SOP 流程库', href: '/sops', icon: BookOpen },
 ];

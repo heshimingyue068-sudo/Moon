@@ -15,6 +15,7 @@ import { Chatbot } from './pages/Chatbot';
 import { ImageGenerator } from './pages/ImageGenerator';
 import { OperatorWorkspace } from './pages/OperatorWorkspace';
 import { BrandList } from './pages/BrandList';
+import { ClientList } from './pages/ClientList';
 import { CompanyInfo } from './pages/CompanyInfo';
 import { OperatorManagement } from './pages/OperatorManagement';
 
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="brands" element={<Brands />} />
+            <Route path="clients" element={<ClientList />} />
             <Route path="brand-list" element={<BrandList />} />
             <Route path="company/:id" element={<CompanyInfo />} />
             <Route path="brands/:id" element={<BrandDetails />} />

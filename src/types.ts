@@ -1,16 +1,28 @@
 export type LifecyclePhase = 'ONBOARDING' | 'OPERATING' | 'REVIEW';
+
 export type ServiceFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
 
-export interface ServiceTemplate {
+export type ServiceTemplate = {
   id: string;
   name: string;
   description: string;
   frequency: ServiceFrequency;
   targetCount: number;
   targetRole: string;
-}
+};
 
-export interface BrandServiceTask {
+export type Operator = {
+  id: string;
+  name: string;
+  avatar: string;
+  title: string;
+  email?: string;
+  department?: string;
+  status?: string;
+  phone?: string;
+};
+
+export type BrandServiceTask = {
   id: string;
   templateId: string;
   name: string;
@@ -20,109 +32,94 @@ export interface BrandServiceTask {
   lastRecordDate?: string;
   operator?: string;
   records: { id: string; date: string; note: string }[];
-}
+};
 
-export interface FinancePeriod {
-  id: string;
-  periodName: string;
-  reconciliation: { status: 'PENDING' | 'COMPLETED'; clientAmount: number; brandAmount: number };
-  settlement: { status: 'PENDING' | 'COMPLETED'; amount: number };
-  invoicing: { status: 'PENDING' | 'COMPLETED'; amount: number; invoiceNo?: string };
-  collection: { status: 'PENDING' | 'COMPLETED'; amount: number };
-}
-
-export interface BrandOperationHistory {
+export type BrandOperationHistory = {
   id: string;
   date: string;
   user: string;
   action: string;
   details: string;
-}
+};
 
-export interface BrandCase {
-  id: string;
-  type: 'SUCCESS' | 'FAILURE';
-  brandName: string;
-  date: string;
-  client: string;
-  event: string;
-  summary: string;
-}
-
-export interface BrandTodo {
+export type BrandTodo = {
   id: string;
   text: string;
   completed: boolean;
-  dueDate?: string;
-  completedAt?: string;
+  dueDate: string;
   brandName?: string;
-  cc?: string[];
   operator?: string;
+  completedAt?: string;
   materialName?: string;
   materialUrl?: string;
-}
+  cc?: string[];
+};
 
-export interface BrandAsset {
+export type BrandAsset = {
   id: string;
   name: string;
-  type: string;
+  type: 'PDF' | 'IMAGE' | 'EXCEL' | 'PPT' | 'ZIP' | 'OTHER';
   url: string;
   uploadDate: string;
-}
+};
 
-export interface ContractDetails {
-  status: 'DRAFT' | 'SIGNED' | 'EXPIRED';
-  partyA: string;
-  partyB: string;
-  validFrom: string;
-  validTo: string;
-  files: { name: string; url: string }[];
-}
-
-export interface ChannelListingRule {
+export type ChannelListingRule = {
   clientId: string;
   clientName: string;
   rules: string[];
   requiredMaterials: string[];
   templates: { name: string; url: string }[];
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
-}
+  status: 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED';
+};
 
-export interface ListedProduct {
+export type CompanyEntity = {
   id: string;
   name: string;
-  clientProductName: string;
-  status: 'ONLINE' | 'OFFLINE' | 'REVIEWING';
-  listingTime: string;
-}
-
-export interface Operator {
-  id: string;
-  name: string;
-  avatar: string;
-  title: string;
-  email?: string;
-  phone?: string;
-  department?: string;
-  status?: 'ACTIVE' | 'INACTIVE';
-}
-
-export interface CompanyEntity {
-  id: string;
-  name: string;
-  type: 'CLIENT' | 'BRAND';
+  type: 'BRAND' | 'CLIENT';
   logo: string;
-  contactPerson?: string;
-  contactPhone?: string;
-  contractDetails?: ContractDetails;
-  resources?: { id: string; name: string; type: string; url: string; uploadTime: string }[];
-}
+  contactPerson: string;
+  contactPhone: string;
+  contactPosition?: string;
+  category?: string;
+  manager: string;
+  contractDetails?: {
+    status: 'SIGNED' | 'DRAFT' | 'EXPIRED';
+    partyA: string;
+    partyB: string;
+    validFrom: string;
+    validTo: string;
+    files: { name: string; url: string }[];
+  };
+  agencyAuth?: { name: string; url: string }[];
+  logoAuth?: { name: string; url: string }[];
+  qualifications?: {
+    trademark?: { name: string; url: string }[];
+    icp?: { name: string; url: string }[];
+    industryCert?: { name: string; url: string }[];
+    other?: { name: string; url: string }[];
+  };
+  resources: { id: string; name: string; type: string; url: string; uploadTime: string }[];
+  relatedEntityIds: string[];
+};
 
-export interface Brand {
+export type ContractDetail = {
+  id?: string;
+  name?: string;
+  status: 'SIGNED' | 'DRAFT' | 'EXPIRED';
+  partyA: string;
+  partyB: string;
+  validFrom: string;
+  validTo: string;
+  files: { name: string; url: string }[];
+};
+
+export type Brand = {
   id: string;
   name: string;
-  clientId?: string;
-  brandIds?: string[];
+  description?: string;
+  createdAt?: string;
+  clientId: string;
+  brandIds: string[];
   brands?: string[];
   logo: string;
   category: string;
@@ -132,65 +129,56 @@ export interface Brand {
   operators?: string[];
   todos?: BrandTodo[];
   assets?: BrandAsset[];
-
-  // 1. 前期：接入与上架
-  onboarding: {
-    signing: {
-      completed: boolean;
-      taxRate: string;
-      paymentMode: string;
-      costPriceDesc: string;
-      settlementMode: string;
-      annualProcurement: string;
-      contractDetails?: ContractDetails;
-    };
-    brandApi: { completed: boolean; progress: number; notes: string };
-    channelListing: { completed: boolean; channels: string[]; notes: string; listings?: ChannelListingRule[]; listedProducts?: ListedProduct[] };
-    channelApi: { completed: boolean; progress: number; notes: string };
-  };
-
-  // 2. 中期：运营监控与财务
-  operations: {
-    coreMetrics: {
-      salesAmount: number;
-      orderCount: number;
-      complaintRate: number;
-      usageRate: number;
-      targetReachRate: number;
-    };
-    services: BrandServiceTask[];
-    reports: {
-      id: string;
-      type: 'DAILY' | 'WEEKLY' | 'MONTHLY';
-      title: string;
-      date: string;
-      status: 'SUBMITTED' | 'PENDING';
-    }[];
-    activities: {
-      id: string;
-      title: string;
-      status: 'PLANNING' | 'APPROVED' | 'ACTIVE' | 'ENDED';
-      time: string;
-      client?: string;
-      products?: string[];
-      details?: string;
-      materials?: { name: string; url: string }[];
-    }[];
-  };
-  finance: {
-    periods: FinancePeriod[];
-  };
-
-  // 3. 后期：复盘与案例
-  reviews: {
-    id: string;
-    date: string;
-    title: string;
-    summary: string;
-    isReplicable: boolean;
-  }[];
-  cases: BrandCase[];
-
-  // 操作历史
+  onboarding: any;
+  operations: any;
+  finance: any;
+  reviews: any[];
+  cases: any[];
   operationHistory: BrandOperationHistory[];
-}
+  contracts?: ContractDetail[];
+};
+
+// New types for Brand and Client Management
+export type ServiceType = 'general' | 'weekly_report' | 'monthly_report';
+
+export type ServiceItem = {
+  id: string;
+  entityId: string;
+  name: string;
+  type: ServiceType;
+};
+
+export type ReportField = {
+  id: string;
+  label: string;
+};
+
+export const AVAILABLE_REPORT_FIELDS: ReportField[] = [
+  { id: 'impressions', label: '曝光量 (Impressions)' },
+  { id: 'clicks', label: '点击量 (Clicks)' },
+  { id: 'ctr', label: '点击率 (CTR)' },
+  { id: 'spend', label: '消耗 (Spend)' },
+  { id: 'conversions', label: '转化数 (Conversions)' },
+  { id: 'cpa', label: '转化成本 (CPA)' },
+  { id: 'roi', label: '投资回报率 (ROI)' },
+  { id: 'top_posts', label: '热门内容 (Top Posts)' },
+  { id: 'audience_insights', label: '受众分析 (Audience Insights)' },
+  { id: 'competitor_analysis', label: '竞品分析 (Competitor Analysis)' },
+  { id: 'next_week_plan', label: '下周计划 (Next Week Plan)' },
+];
+
+export type ReportTemplate = {
+  id: string;
+  serviceItemId: string;
+  selectedFieldIds: string[];
+};
+
+export type Client = {
+  id: string;
+  name: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  brandIds: string[]; // Associated brands
+  createdAt: string;
+};

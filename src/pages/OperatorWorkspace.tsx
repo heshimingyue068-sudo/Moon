@@ -234,8 +234,8 @@ export const OperatorWorkspace: React.FC = () => {
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
-        {/* Left Panel: Tasks & Projects */}
-        <div className="w-full lg:w-7/12 flex flex-col gap-6 overflow-y-auto pr-2">
+        {/* Left Panel: Tasks */}
+        <div className="w-full lg:w-5/12 flex flex-col gap-6 overflow-y-auto pr-2">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex-1 min-h-0 overflow-y-auto">
             <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
               <CheckCircle2 className="w-5 h-5 mr-2 text-indigo-600" />
@@ -320,8 +320,12 @@ export const OperatorWorkspace: React.FC = () => {
               )}
             </div>
           </div>
+        </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-0">
+        {/* Right Panel: Projects & AI Assistant */}
+        <div className="w-full lg:w-7/12 flex flex-col gap-6 overflow-y-auto pr-2">
+          {/* Projects */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-0 flex-1">
             <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center shrink-0">
               <Briefcase className="w-5 h-5 mr-2 text-indigo-600" />
               {role === 'MANAGER' ? '所有项目' : '我负责的项目'} ({displayProjects.length})
@@ -377,10 +381,9 @@ export const OperatorWorkspace: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
 
-        {/* Right Panel: AI Assistant */}
-        <div className="w-full lg:w-5/12 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-0">
+          {/* AI Assistant */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-0 flex-1">
         <div className="p-4 border-b border-slate-100 bg-indigo-50/50 flex items-center">
           <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
             <Bot className="w-6 h-6 text-indigo-600" />
@@ -439,6 +442,7 @@ export const OperatorWorkspace: React.FC = () => {
             </button>
           </div>
         </div>
+      </div>
       </div>
       </div>
 

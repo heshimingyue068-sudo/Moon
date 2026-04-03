@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
-import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, AlertTriangle, Activity, DollarSign, BarChart3, Settings, Plus, X, History, ThumbsUp, ThumbsDown, CheckSquare, FolderOpen, Download, Upload, Edit2, Users } from 'lucide-react';
-import { LifecyclePhase, BrandServiceTask, BrandOperationHistory, BrandTodo, BrandAsset, ChannelListingRule } from '../types';
+import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, AlertTriangle, DollarSign, BarChart3, Settings, Plus, X, History, ThumbsUp, ThumbsDown, CheckSquare, FolderOpen, Download, Upload, Edit2, Users } from 'lucide-react';
+import { LifecyclePhase, BrandOperationHistory, BrandTodo, BrandAsset, ChannelListingRule } from '../types';
+import { EntityServiceConfig } from '../components/EntityServiceConfig';
 
 export const BrandDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { brands, serviceTemplates, updateBrand } = useAppContext();
+  const { brands, updateBrand } = useAppContext();
   const brand = brands.find((b) => b.id === id);
   
   const queryParams = new URLSearchParams(location.search);
@@ -17,15 +18,13 @@ export const BrandDetails: React.FC = () => {
   const filteredTodos = brand?.todos?.filter(t => !subBrand || t.brandName === subBrand) || [];
 
   const [activePhase, setActivePhase] = useState<LifecyclePhase>(brand?.currentPhase || 'ONBOARDING');
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-  const [isRecordModalOpen, setIsRecordModalOpen] = useState<string | null>(null);
-  const [recordNote, setRecordNote] = useState('');
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>(brand?.finance?.periods?.[0]?.id || '');
   const [isEditFinanceModalOpen, setIsEditFinanceModalOpen] = useState(false);
   const [editingFinancePeriod, setEditingFinancePeriod] = useState<any>(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [activeTodoModal, setActiveTodoModal] = useState(false);
   const [activeAssetModal, setActiveAssetModal] = useState(false);
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   
   const [isAddActivityModalOpen, setIsAddActivityModalOpen] = useState(false);
@@ -65,72 +64,6 @@ export const BrandDetails: React.FC = () => {
       details
     };
     return [newLog, ...(brand.operationHistory || [])];
-  };
-
-  const handleAddService = (templateId: string, operator?: string) => {
-    const template = serviceTemplates.find(t => t.id === templateId);
-    if (!template) return;
-    
-    const newService: BrandServiceTask = {
-      id: `bs${Date.now()}`,
-      templateId: template.id,
-      name: template.name,
-      frequency: template.frequency,
-      targetCount: template.targetCount,
-      currentCount: 0,
-      operator: operator || (brand.operators?.[0] || '未分配'),
-      records: []
-    };
-    
-    updateBrand(brand.id, {
-      operations: {
-        ...brand.operations,
-        services: [...(brand.operations.services || []), newService]
-      },
-      operationHistory: addLog('添加服务事项', `添加了【${template.name}】服务，下发给: ${newService.operator}`)
-    });
-  };
-
-  const handleRemoveService = (serviceId: string) => {
-    const service = brand.operations.services.find(s => s.id === serviceId);
-    updateBrand(brand.id, {
-      operations: {
-        ...brand.operations,
-        services: brand.operations.services.filter(s => s.id !== serviceId)
-      },
-      operationHistory: addLog('移除服务事项', `移除了【${service?.name || '未知'}】服务`)
-    });
-  };
-
-  const handleRecordService = () => {
-    if (!isRecordModalOpen || !recordNote) return;
-    
-    const updatedServices = brand.operations.services.map(service => {
-      if (service.id === isRecordModalOpen) {
-        const today = new Date().toISOString().split('T')[0];
-        return {
-          ...service,
-          currentCount: service.currentCount + 1,
-          lastRecordDate: today,
-          records: [
-            { id: `r${Date.now()}`, date: today, note: recordNote },
-            ...service.records
-          ]
-        };
-      }
-      return service;
-    });
-    
-    updateBrand(brand.id, {
-      operations: {
-        ...brand.operations,
-        services: updatedServices
-      },
-      operationHistory: addLog('记录服务执行', `记录了服务执行备注: ${recordNote}`)
-    });
-    
-    setIsRecordModalOpen(null);
-    setRecordNote('');
   };
 
   const handleAddFinancePeriod = () => {
@@ -283,159 +216,147 @@ export const BrandDetails: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate('/brands')}
-            className="inline-flex items-center justify-center rounded-md p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-500 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <img src={brand.logo} alt={brand.name} className="h-16 w-16 rounded-full border border-slate-200 object-cover" referrerPolicy="no-referrer" />
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              {brand.name} {subBrand && <span className="text-indigo-600 ml-2">/ {subBrand}</span>}
-            </h1>
-            <div className="flex items-center space-x-3 mt-1">
-              <span className="text-sm text-slate-500">{brand.category}</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-sm text-slate-500">负责人: {brand.manager}</span>
-              {brand.operators && brand.operators.length > 0 ? (
-                <>
-                  <span className="text-slate-300">|</span>
-                  <span className="text-sm text-slate-500 flex items-center">
-                    运营: {brand.operators.join(', ')}
-                    <button 
-                      onClick={() => {
-                        setEditingOperators([...(brand.operators || [])]);
-                        setIsOperatorModalOpen(true);
-                      }}
-                      className="ml-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </button>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-8 border-b border-slate-100">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center space-x-5">
+              <button
+                onClick={() => navigate('/brands')}
+                className="inline-flex items-center justify-center rounded-full p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+                title="返回项目列表"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div className="relative">
+                <img src={brand.logo} alt={brand.name} className="h-20 w-20 rounded-xl border border-slate-200 object-cover shadow-sm" referrerPolicy="no-referrer" />
+                <div className={`absolute -bottom-2 -right-2 rounded-full p-1 border-2 border-white ${
+                  brand.healthStatus === 'HEALTHY' ? 'bg-green-500' :
+                  brand.healthStatus === 'AT_RISK' ? 'bg-yellow-500' :
+                  'bg-red-500'
+                }`} title={brand.healthStatus === 'HEALTHY' ? '健康' : brand.healthStatus === 'AT_RISK' ? '预警' : '危机'}>
+                  <div className="h-3 w-3 rounded-full bg-white/20"></div>
+                </div>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+                  {brand.name} {subBrand && <span className="text-indigo-600 ml-2 font-semibold">/ {subBrand}</span>}
+                </h1>
+                <div className="flex flex-wrap items-center gap-3 mt-3">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                    {brand.category}
                   </span>
-                </>
-              ) : (
-                <>
                   <span className="text-slate-300">|</span>
-                  <button 
-                    onClick={() => {
-                      setEditingOperators([]);
-                      setIsOperatorModalOpen(true);
-                    }}
-                    className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center"
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-0.5" />
-                    添加运营
-                  </button>
-                </>
-              )}
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                brand.healthStatus === 'HEALTHY' ? 'bg-green-100 text-green-800' :
-                brand.healthStatus === 'AT_RISK' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {brand.healthStatus === 'HEALTHY' ? '健康' :
-                 brand.healthStatus === 'AT_RISK' ? '预警' : '危机'}
-              </span>
+                  <span className="text-sm text-slate-600 flex items-center">
+                    <span className="text-slate-400 mr-1">负责人:</span> {brand.manager}
+                  </span>
+                  {brand.operators && brand.operators.length > 0 ? (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span className="text-sm text-slate-600 flex items-center group">
+                        <span className="text-slate-400 mr-1">运营:</span> {brand.operators.join(', ')}
+                        <button 
+                          onClick={() => {
+                            setEditingOperators([...(brand.operators || [])]);
+                            setIsOperatorModalOpen(true);
+                          }}
+                          className="ml-2 text-slate-300 opacity-0 group-hover:opacity-100 hover:text-indigo-600 transition-all"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <button 
+                        onClick={() => {
+                          setEditingOperators([]);
+                          setIsOperatorModalOpen(true);
+                        }}
+                        className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center font-medium bg-indigo-50 px-2 py-1 rounded-md transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        添加运营
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button 
+                onClick={() => setActiveTodoModal(true)}
+                className="inline-flex items-center justify-center rounded-lg bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700 shadow-sm ring-1 ring-inset ring-rose-200 hover:bg-rose-100 transition-colors"
+              >
+                <CheckSquare className="mr-2 h-4 w-4" />
+                待办事项
+                {filteredTodos.filter(t => !t.completed).length > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold text-white shadow-sm">
+                    {filteredTodos.filter(t => !t.completed).length}
+                  </span>
+                )}
+              </button>
+              <button 
+                onClick={() => setActiveAssetModal(true)}
+                className="inline-flex items-center justify-center rounded-lg bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 shadow-sm ring-1 ring-inset ring-blue-200 hover:bg-blue-100 transition-colors"
+              >
+                <FolderOpen className="mr-2 h-4 w-4" />
+                项目资料库
+              </button>
+              <button 
+                onClick={() => setIsContractModalOpen(true)}
+                className="inline-flex items-center justify-center rounded-lg bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700 shadow-sm ring-1 ring-inset ring-amber-200 hover:bg-amber-100 transition-colors"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                合同信息
+              </button>
+              <button 
+                onClick={() => setIsHistoryModalOpen(true)}
+                className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-colors"
+              >
+                <History className="mr-2 h-4 w-4" />
+                操作历史
+              </button>
             </div>
           </div>
         </div>
-        <div className="flex space-x-3">
-          <button 
-            onClick={() => setActiveTodoModal(true)}
-            className="inline-flex items-center justify-center rounded-md bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 shadow-sm ring-1 ring-inset ring-rose-300 hover:bg-rose-100"
-          >
-            <CheckSquare className="mr-2 h-4 w-4" />
-            待办事项
-            {filteredTodos.filter(t => !t.completed).length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white">
-                {filteredTodos.filter(t => !t.completed).length}
-              </span>
-            )}
-          </button>
-          <button 
-            onClick={() => setActiveAssetModal(true)}
-            className="inline-flex items-center justify-center rounded-md bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 shadow-sm ring-1 ring-inset ring-blue-300 hover:bg-blue-100"
-          >
-            <FolderOpen className="mr-2 h-4 w-4" />
-            项目资料库
-          </button>
-          <button 
-            onClick={() => setIsHistoryModalOpen(true)}
-            className="inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
-          >
-            <History className="mr-2 h-4 w-4" />
-            操作历史
-          </button>
-          <button 
-            onClick={() => setIsConfigModalOpen(true)}
-            className="inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            配置服务
-          </button>
-        </div>
+        
+        {/* Brand Tabs (if multiple brands exist) */}
+        {brand.brands && brand.brands.length > 0 && (
+          <div className="bg-white">
+            <nav className="flex divide-x divide-slate-100 overflow-x-auto" aria-label="Tabs">
+              <button
+                onClick={() => navigate(`/brands/${brand.id}`)}
+                className={`group relative min-w-0 flex-1 overflow-hidden py-4 px-4 text-center text-sm font-medium transition-colors focus:z-10 ${
+                  !subBrand ? 'text-indigo-600 bg-indigo-50/30' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                全部品牌
+                <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 transition-colors ${!subBrand ? 'bg-indigo-600' : 'bg-transparent group-hover:bg-slate-200'}`} />
+              </button>
+              {brand.brands.map((bName) => (
+                <button
+                  key={bName}
+                  onClick={() => navigate(`/brands/${brand.id}?brand=${encodeURIComponent(bName)}`)}
+                  className={`group relative min-w-0 flex-1 overflow-hidden py-4 px-4 text-center text-sm font-medium transition-colors focus:z-10 ${
+                    subBrand === bName ? 'text-indigo-600 bg-indigo-50/30' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                  }`}
+                >
+                  {bName}
+                  <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 transition-colors ${subBrand === bName ? 'bg-indigo-600' : 'bg-transparent group-hover:bg-slate-200'}`} />
+                </button>
+              ))}
+            </nav>
+          </div>
+        )}
       </div>
 
-      {/* Lifecycle Pipeline Navigation */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <nav className="flex divide-x divide-slate-200" aria-label="Tabs">
-          <button
-            onClick={() => setActivePhase('ONBOARDING')}
-            className={`group relative min-w-0 flex-1 overflow-hidden py-4 px-4 text-center text-sm font-medium hover:bg-slate-50 focus:z-10 ${
-              activePhase === 'ONBOARDING' ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <span className="flex items-center justify-center">
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 mr-2 ${
-                activePhase === 'ONBOARDING' ? 'border-indigo-600 text-indigo-600' : 'border-slate-300 text-slate-500'
-              }`}>1</span>
-              第一阶段：接入与上架
-            </span>
-            <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 ${activePhase === 'ONBOARDING' ? 'bg-indigo-600' : 'bg-transparent'}`} />
-          </button>
-
-          <button
-            onClick={() => setActivePhase('OPERATING')}
-            className={`group relative min-w-0 flex-1 overflow-hidden py-4 px-4 text-center text-sm font-medium hover:bg-slate-50 focus:z-10 ${
-              activePhase === 'OPERATING' ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <span className="flex items-center justify-center">
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 mr-2 ${
-                activePhase === 'OPERATING' ? 'border-indigo-600 text-indigo-600' : 'border-slate-300 text-slate-500'
-              }`}>2</span>
-              第二阶段：运营监控与财务
-            </span>
-            <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 ${activePhase === 'OPERATING' ? 'bg-indigo-600' : 'bg-transparent'}`} />
-          </button>
-
-          <button
-            onClick={() => setActivePhase('REVIEW')}
-            className={`group relative min-w-0 flex-1 overflow-hidden py-4 px-4 text-center text-sm font-medium hover:bg-slate-50 focus:z-10 ${
-              activePhase === 'REVIEW' ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <span className="flex items-center justify-center">
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 mr-2 ${
-                activePhase === 'REVIEW' ? 'border-indigo-600 text-indigo-600' : 'border-slate-300 text-slate-500'
-              }`}>3</span>
-              第三阶段：复盘与案例
-            </span>
-            <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 ${activePhase === 'REVIEW' ? 'bg-indigo-600' : 'bg-transparent'}`} />
-          </button>
-        </nav>
-      </div>
-
-      {/* Content Area based on Phase */}
+      {/* Content Area - All Phases Sequentially */}
       <div className="grid grid-cols-1 gap-6">
         
         {/* Phase 1: Onboarding */}
-        {activePhase === 'ONBOARDING' && (
-          <div className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
+        <div className="space-y-6">
+          <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-medium text-slate-900 flex items-center">
                   <FileText className="h-5 w-5 text-indigo-500 mr-2" />
@@ -464,59 +385,6 @@ export const BrandDetails: React.FC = () => {
                   <dt className="text-sm font-medium text-slate-500">年度采购量预估</dt>
                   <dd className="mt-1 text-base font-semibold text-slate-900">{brand.onboarding.signing.annualProcurement}</dd>
                 </div>
-                {brand.onboarding.signing.contractDetails && (
-                  <div className="col-span-2 md:col-span-3 border-t border-slate-200 pt-4 mt-2">
-                    <h4 className="text-sm font-bold text-slate-900 mb-3">合同详细信息</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <dt className="text-xs font-medium text-slate-500">合同状态</dt>
-                        <dd className="mt-1">
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                            brand.onboarding.signing.contractDetails.status === 'SIGNED' ? 'bg-green-100 text-green-800' :
-                            brand.onboarding.signing.contractDetails.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {brand.onboarding.signing.contractDetails.status === 'SIGNED' ? '已签约' :
-                             brand.onboarding.signing.contractDetails.status === 'DRAFT' ? '草稿/审核中' : '已过期'}
-                          </span>
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs font-medium text-slate-500">有效期</dt>
-                        <dd className="mt-1 text-sm font-medium text-slate-900">
-                          {brand.onboarding.signing.contractDetails.validFrom} 至 {brand.onboarding.signing.contractDetails.validTo}
-                        </dd>
-                      </div>
-                      <div className="col-span-2">
-                        <dt className="text-xs font-medium text-slate-500">签约主体</dt>
-                        <dd className="mt-1 text-sm text-slate-900">
-                          <span className="font-medium">甲方:</span> {brand.onboarding.signing.contractDetails.partyA}<br/>
-                          <span className="font-medium">乙方:</span> {brand.onboarding.signing.contractDetails.partyB}
-                        </dd>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <dt className="text-xs font-medium text-slate-500 mb-2">已上传合同文件</dt>
-                      <dd>
-                        <ul className="space-y-2">
-                          {brand.onboarding.signing.contractDetails.files.map((file, idx) => (
-                            <li key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-md">
-                              <div className="flex items-center">
-                                <FileText className="h-4 w-4 text-slate-400 mr-2" />
-                                <span className="text-sm text-indigo-600 hover:underline cursor-pointer">{file.name}</span>
-                              </div>
-                              <button className="text-slate-400 hover:text-slate-600"><Download className="h-4 w-4" /></button>
-                            </li>
-                          ))}
-                        </ul>
-                        <button className="mt-3 inline-flex items-center px-3 py-1.5 border border-slate-300 shadow-sm text-xs font-medium rounded text-slate-700 bg-white hover:bg-slate-50">
-                          <Upload className="h-3.5 w-3.5 mr-1.5" />
-                          上传新文件
-                        </button>
-                      </dd>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -704,12 +572,10 @@ export const BrandDetails: React.FC = () => {
               </div>
             </div>
           </div>
-        )}
 
         {/* Phase 2: Operating */}
-        {activePhase === 'OPERATING' && (
-          <div className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
+        <div className="space-y-6">
+          <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-medium text-slate-900 flex items-center">
                   <BarChart3 className="h-5 w-5 text-indigo-500 mr-2" />
@@ -747,102 +613,8 @@ export const BrandDetails: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Services Configuration & Execution */}
-              <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200 lg:col-span-2">
-                <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
-                  <div>
-                    <h3 className="text-lg font-medium text-slate-900 flex items-center">
-                      <Activity className="h-5 w-5 text-indigo-500 mr-2" />
-                      服务执行大厅
-                    </h3>
-                    <p className="text-sm text-slate-500 mt-1">管理并记录该品牌的所有标准化服务动作</p>
-                  </div>
-                  <button 
-                    onClick={() => setIsConfigModalOpen(true)}
-                    className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors"
-                  >
-                    <Settings className="mr-1.5 h-4 w-4" />
-                    配置服务
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {brand.operations.services && brand.operations.services.length > 0 ? (
-                    brand.operations.services.map(service => (
-                      <div key={service.id} className="group relative p-5 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all hover:border-indigo-200">
-                        <button 
-                          onClick={() => handleRemoveService(service.id)}
-                          className="absolute top-3 right-3 p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="移除服务"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="pr-6">
-                            <h4 className="font-semibold text-slate-900 text-base">{service.name}</h4>
-                            <div className="flex flex-col space-y-1 mt-1">
-                              <p className="text-xs text-slate-500 flex items-center">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {service.frequency === 'DAILY' ? '每天' : service.frequency === 'WEEKLY' ? '每周' : service.frequency === 'MONTHLY' ? '每月' : '自定义'} {service.targetCount} 次
-                              </p>
-                              {service.operator && (
-                                <p className="text-xs text-slate-500 flex items-center">
-                                  <span className="inline-block w-3 h-3 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-1 text-[8px]">运</span>
-                                  {service.operator}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end">
-                            <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-bold ${
-                              service.currentCount >= service.targetCount ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                            }`}>
-                              {service.currentCount}/{service.targetCount}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* Progress Bar */}
-                        <div className="w-full bg-slate-100 rounded-full h-2 mb-4 overflow-hidden">
-                          <div 
-                            className={`h-2 transition-all duration-500 ${service.currentCount >= service.targetCount ? 'bg-green-500' : 'bg-yellow-500'}`} 
-                            style={{ width: `${Math.min((service.currentCount / service.targetCount) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-
-                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100">
-                          <span className="text-xs text-slate-500">
-                            最新: <span className="font-medium text-slate-700">{service.lastRecordDate || '暂无'}</span>
-                          </span>
-                          <button 
-                            onClick={() => setIsRecordModalOpen(service.id)}
-                            className="inline-flex items-center text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md transition-colors shadow-sm"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            记录执行
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="col-span-full text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-                      <FileText className="h-8 w-8 text-slate-400 mx-auto mb-3" />
-                      <p className="text-sm text-slate-600 font-medium">暂未配置服务事项</p>
-                      <p className="text-xs text-slate-500 mt-1 mb-4">为该品牌配置标准化的服务动作进行管控</p>
-                      <button 
-                        onClick={() => setIsConfigModalOpen(true)}
-                        className="inline-flex items-center text-sm text-indigo-600 font-medium hover:text-indigo-800"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        立即配置
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Activities */}
-              <div className="space-y-6">
+              <div className="space-y-6 lg:col-span-2">
                 <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-medium text-slate-900">近期活动</h3>
@@ -1085,13 +857,13 @@ export const BrandDetails: React.FC = () => {
                 </div>
               )}
             </div>
+            
+            <EntityServiceConfig entityId={brand.id} />
           </div>
-        )}
 
         {/* Phase 3: Review & Cases */}
-        {activePhase === 'REVIEW' && (
-          <div className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
+        <div className="space-y-6">
+          <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-slate-900">7. 后期复盘总结</h3>
                 <button className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">新建复盘</button>
@@ -1202,127 +974,9 @@ export const BrandDetails: React.FC = () => {
               </div>
             </div>
           </div>
-        )}
 
       </div>
 
-      {/* Configuration Modal */}
-      {isConfigModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">配置服务事项</h3>
-              <button 
-                onClick={() => setIsConfigModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-              {serviceTemplates.map(template => {
-                const isAdded = brand.operations.services?.some(s => s.templateId === template.id);
-                return (
-                  <div key={template.id} className="flex flex-col p-3 rounded-lg border border-slate-200 bg-slate-50 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900 text-sm">{template.name}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{template.targetRole} · {template.targetCount}次/{template.frequency === 'WEEKLY' ? '周' : template.frequency === 'MONTHLY' ? '月' : '天'}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const selectEl = document.getElementById(`operator-select-${template.id}`) as HTMLSelectElement;
-                          handleAddService(template.id, selectEl?.value);
-                        }}
-                        disabled={isAdded}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                          isAdded 
-                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed' 
-                            : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-                        }`}
-                      >
-                        {isAdded ? '已添加' : '添加并下发'}
-                      </button>
-                    </div>
-                    {!isAdded && brand.operators && brand.operators.length > 0 && (
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-slate-500">下发给:</span>
-                        <select 
-                          id={`operator-select-${template.id}`}
-                          className="text-xs border-slate-200 rounded-md py-1 pl-2 pr-6 focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                          {brand.operators.map(op => (
-                            <option key={op} value={op}>{op}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setIsConfigModalOpen(false)}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-              >
-                完成
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Record Execution Modal */}
-      {isRecordModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">记录服务执行</h3>
-              <button 
-                onClick={() => {
-                  setIsRecordModalOpen(null);
-                  setRecordNote('');
-                }}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">执行备注</label>
-                <textarea
-                  value={recordNote}
-                  onChange={(e) => setRecordNote(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="简要描述本次服务的内容..."
-                  autoFocus
-                />
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setIsRecordModalOpen(null);
-                  setRecordNote('');
-                }}
-                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleRecordService}
-                disabled={!recordNote.trim()}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                保存记录
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Edit Finance Period Modal */}
       {isEditFinanceModalOpen && editingFinancePeriod && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
@@ -1488,6 +1142,91 @@ export const BrandDetails: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Contract Modal */}
+      {isContractModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="w-full max-w-3xl rounded-xl bg-white shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-indigo-600" />
+                合同信息
+              </h3>
+              <button 
+                onClick={() => setIsContractModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+              <div className="space-y-6">
+                {brand.contracts && brand.contracts.length > 0 ? (
+                  brand.contracts.map((contract, index) => (
+                    <div key={contract.id || index} className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <h4 className="text-md font-semibold text-slate-800">{contract.name || `合同 ${index + 1}`}</h4>
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          contract.status === 'SIGNED' ? 'bg-green-100 text-green-800' :
+                          contract.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {contract.status === 'SIGNED' ? '已签约' :
+                           contract.status === 'DRAFT' ? '草稿/审核中' : '已过期'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-slate-500">甲方：</span>
+                          <span className="font-medium text-slate-900">{contract.partyA}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">乙方：</span>
+                          <span className="font-medium text-slate-900">{contract.partyB}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500">有效期：</span>
+                          <span className="font-medium text-slate-900">{contract.validFrom} 至 {contract.validTo}</span>
+                        </div>
+                      </div>
+                      {contract.files && contract.files.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <h5 className="text-xs font-medium text-slate-500 mb-2">附件</h5>
+                          <ul className="space-y-2">
+                            {contract.files.map((file, fIdx) => (
+                              <li key={fIdx} className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-md">
+                                <div className="flex items-center">
+                                  <FileText className="h-4 w-4 text-slate-400 mr-2" />
+                                  <span className="text-sm text-indigo-600 hover:underline cursor-pointer">{file.name}</span>
+                                </div>
+                                <button className="text-slate-400 hover:text-slate-600"><Download className="h-4 w-4" /></button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 bg-white rounded-lg border border-dashed border-slate-300">
+                    <FileText className="mx-auto h-12 w-12 text-slate-300" />
+                    <h3 className="mt-2 text-sm font-medium text-slate-900">暂无合同</h3>
+                    <p className="mt-1 text-sm text-slate-500">该项目暂未上传任何合同信息。</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-100 bg-white flex justify-end">
+              <button
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 flex items-center"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                新增合同
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* History Modal */}
       {isHistoryModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
@@ -1619,9 +1358,41 @@ export const BrandDetails: React.FC = () => {
                   上传资料
                 </button>
               </div>
-              {brand.assets && brand.assets.length > 0 ? (
+
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-slate-800 mb-3">资质文件</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {['代理授权', 'Logo授权', '商标注册证', 'ICP备案', '行业证书', '其他资质'].map((qual) => {
+                    const asset = brand.assets?.find(a => a.name.includes(qual));
+                    return (
+                      <div key={qual} className="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <span className="text-xs font-medium text-slate-500 mb-2">{qual}</span>
+                        {asset ? (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center overflow-hidden">
+                              <FileText className="h-4 w-4 text-indigo-500 mr-1.5 flex-shrink-0" />
+                              <span className="text-sm text-slate-900 truncate" title={asset.name}>{asset.name}</span>
+                            </div>
+                            <button className="text-slate-400 hover:text-indigo-600 ml-2 flex-shrink-0">
+                              <Download className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-400 italic">未上传</span>
+                            <button className="text-xs text-indigo-600 hover:text-indigo-800">上传</button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <h4 className="text-sm font-semibold text-slate-800 mb-3">其他资料</h4>
+              {brand.assets && brand.assets.filter(a => !['代理授权', 'Logo授权', '商标注册证', 'ICP备案', '行业证书', '其他资质'].some(q => a.name.includes(q))).length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {brand.assets.map(asset => (
+                  {brand.assets.filter(a => !['代理授权', 'Logo授权', '商标注册证', 'ICP备案', '行业证书', '其他资质'].some(q => a.name.includes(q))).map(asset => (
                     <div key={asset.id} className="flex items-center p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-indigo-300 transition-colors">
                       <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center mr-4 flex-shrink-0">
                         <FileText className="h-5 w-5 text-indigo-600" />

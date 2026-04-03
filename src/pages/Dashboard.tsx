@@ -15,6 +15,8 @@ const mockBrandsData = [
   { id: 'b9', name: '瑞幸咖啡', logo: 'https://picsum.photos/seed/luckin/100/100', years: 1, users: 2800000, industry: '餐饮', gmv: 12000000, orders: 350000 },
   { id: 'b10', name: '库迪咖啡', logo: 'https://picsum.photos/seed/cotti/100/100', years: 1, users: 1500000, industry: '餐饮', gmv: 10000000, orders: 200000 },
   { id: 'b11', name: '霸王茶姬', logo: 'https://picsum.photos/seed/chagee/100/100', years: 1, users: 1200000, industry: '餐饮', gmv: 9000000, orders: 150000 },
+  { id: 'b12', name: '肯德基', logo: 'https://picsum.photos/seed/kfc/100/100', years: 3, users: 9500000, industry: '餐饮', gmv: 35000000, orders: 1100000 },
+  { id: 'b13', name: '麦当劳', logo: 'https://picsum.photos/seed/mcdonalds/100/100', years: 2, users: 8200000, industry: '餐饮', gmv: 29000000, orders: 950000 },
 ];
 
 // Mock data for Service Clients
@@ -26,6 +28,7 @@ const mockClientsData = [
   { id: 'c5', name: '阿里巴巴', logo: 'https://picsum.photos/seed/alibaba/100/100', years: 3, orders: 8800000, users: 45000000, gmv: 28000000, projects: [{name: '88VIP联合权益', brands: ['星巴克', '携程']}, {name: '淘宝省钱卡', brands: ['菜鸟']}] },
   { id: 'c6', name: '北京银行', logo: 'https://picsum.photos/seed/bob/100/100', years: 3, orders: 5600000, users: 22000000, gmv: 18000000, projects: [{name: '京彩生活APP权益', brands: ['曹操出行']}] },
   { id: 'c7', name: '招商银行', logo: 'https://picsum.photos/seed/cmb/100/100', years: 2, orders: 4200000, users: 18000000, gmv: 15000000, projects: [{name: '掌上生活饭票', brands: ['星巴克', '喜茶', '瑞幸咖啡']}] },
+  { id: 'c8', name: '建设银行', logo: 'https://picsum.photos/seed/ccb/100/100', years: 1, orders: 2100000, users: 9500000, gmv: 8500000, projects: [{name: '建行生活APP', brands: ['肯德基', '麦当劳']}] },
 ];
 
 const formatNumber = (num: number) => {
